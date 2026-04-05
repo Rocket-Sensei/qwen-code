@@ -54,6 +54,7 @@ export function useMessageQueue({
   // to prevent chain-submission in one-by-one mode
   const hasProcessedIdleRef = useRef(false);
   const prevStreamingStateRef = useRef<StreamingState>(streamingState);
+  const prevConfigInitializedRef = useRef(isConfigInitialized);
 
   // Add a message to the queue
   const addMessage = useCallback((message: string) => {
@@ -110,22 +111,44 @@ export function useMessageQueue({
     return drained;
   }, []);
 
-  // Process queued messages when streaming becomes idle
+  // Process queued messages when streaming becomes idle or when config initializes
   useEffect(() => {
     // Reset the processed flag when state changes away from Idle
     if (streamingState !== StreamingState.Idle) {
       hasProcessedIdleRef.current = false;
     }
 
-    // Only process once per transition to Idle
+    // Detect transitions: either streaming became Idle, or config just initialized
     const justBecameIdle =
       prevStreamingStateRef.current !== StreamingState.Idle &&
       streamingState === StreamingState.Idle;
+    const justConfigured =
+      !prevConfigInitializedRef.current && isConfigInitialized;
 
     prevStreamingStateRef.current = streamingState;
+    prevConfigInitializedRef.current = isConfigInitialized;
 
+    // Only process once per trigger event
     if (
-      isConfigInitialized &&
+      justConfigured &&
+      streamingState === StreamingState.Idle &&
+      !hasProcessedIdleRef.current &&
+      messageQueue.length > 0
+    ) {
+      hasProcessedIdleRef.current = true;
+
+      if (queueMode === 'one-by-one') {
+        // Submit only the first message, leave the rest queued
+        const [firstMessage, ...remaining] = messageQueue;
+        setMessageQueue(remaining);
+        submitQuery(firstMessage);
+      } else {
+        // Combine all messages with double newlines
+        const combinedMessage = messageQueue.join('\n\n');
+        setMessageQueue([]);
+        submitQuery(combinedMessage);
+      }
+    } else if (
       justBecameIdle &&
       !hasProcessedIdleRef.current &&
       messageQueue.length > 0
