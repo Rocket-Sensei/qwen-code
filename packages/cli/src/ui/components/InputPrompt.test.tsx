@@ -203,6 +203,8 @@ describe('InputPrompt', () => {
       setShellModeActive: vi.fn(),
       flushQueue: vi.fn(),
       hasQueuedMessages: false,
+      queueMode: 'all-at-once',
+      toggleQueueMode: vi.fn(),
       approvalMode: ApprovalMode.DEFAULT,
       inputWidth: 80,
       suggestionsWidth: 80,
@@ -2737,6 +2739,123 @@ describe('InputPrompt', () => {
       // Note: In actual implementation, temporaryCloseFeedbackDialog would be called
 
       vi.doUnmock('../contexts/UIStateContext.js');
+      unmount();
+    });
+  });
+
+  describe('flush queue behavior', () => {
+    it('should flush queue on Enter when input is empty and has queued messages', async () => {
+      const mockFlushQueue = vi.fn();
+      const { stdin, unmount } = renderWithProviders(
+        <InputPrompt
+          {...props}
+          flushQueue={mockFlushQueue}
+          hasQueuedMessages={true}
+        />,
+      );
+      await wait();
+
+      // Ensure buffer is empty
+      mockBuffer.text = '';
+
+      // Press Enter
+      stdin.write('\r');
+      await wait();
+
+      // Should flush the queue
+      expect(mockFlushQueue).toHaveBeenCalled();
+      // Should NOT submit via onSubmit since input was empty
+      expect(props.onSubmit).not.toHaveBeenCalled();
+
+      unmount();
+    });
+
+    it('should NOT flush queue on Enter when input has text', async () => {
+      const mockFlushQueue = vi.fn();
+      const { stdin, unmount } = renderWithProviders(
+        <InputPrompt
+          {...props}
+          flushQueue={mockFlushQueue}
+          hasQueuedMessages={true}
+        />,
+      );
+      await wait();
+
+      // Simulate text in the buffer
+      mockBuffer.text = 'Hello, this is my message';
+
+      // Press Enter
+      stdin.write('\r');
+      await wait();
+
+      // Should NOT flush the queue - the message should be queued normally
+      expect(mockFlushQueue).not.toHaveBeenCalled();
+      // Should submit the current input via normal submit
+      expect(props.onSubmit).toHaveBeenCalledWith('Hello, this is my message');
+
+      unmount();
+    });
+
+    it('should submit normally when hasQueuedMessages is false', async () => {
+      const mockFlushQueue = vi.fn();
+      const { stdin, unmount } = renderWithProviders(
+        <InputPrompt
+          {...props}
+          flushQueue={mockFlushQueue}
+          hasQueuedMessages={false}
+        />,
+      );
+      await wait();
+
+      mockBuffer.text = 'Test message';
+
+      stdin.write('\r');
+      await wait();
+
+      expect(mockFlushQueue).not.toHaveBeenCalled();
+      expect(props.onSubmit).toHaveBeenCalledWith('Test message');
+
+      unmount();
+    });
+  });
+
+  describe('queue mode toggle with Ctrl+Q', () => {
+    it('should toggle queue mode on Ctrl+Q when there are queued messages', async () => {
+      const mockToggleQueueMode = vi.fn();
+      const { stdin, unmount } = renderWithProviders(
+        <InputPrompt
+          {...props}
+          toggleQueueMode={mockToggleQueueMode}
+          hasQueuedMessages={true}
+        />,
+      );
+      await wait();
+
+      // Send Ctrl+Q
+      stdin.write('\x11'); // Ctrl+Q
+      await wait();
+
+      expect(mockToggleQueueMode).toHaveBeenCalled();
+
+      unmount();
+    });
+
+    it('should NOT toggle queue mode on Ctrl+Q when no queued messages', async () => {
+      const mockToggleQueueMode = vi.fn();
+      const { stdin, unmount } = renderWithProviders(
+        <InputPrompt
+          {...props}
+          toggleQueueMode={mockToggleQueueMode}
+          hasQueuedMessages={false}
+        />,
+      );
+      await wait();
+
+      stdin.write('\x11'); // Ctrl+Q
+      await wait();
+
+      expect(mockToggleQueueMode).not.toHaveBeenCalled();
+
       unmount();
     });
   });

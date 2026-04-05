@@ -80,7 +80,11 @@ export const Composer = () => {
 
       {!uiState.isConfigInitialized && <ConfigInitDisplay />}
 
-      <QueuedMessageDisplay messageQueue={uiState.messageQueue} />
+      <QueuedMessageDisplay
+        messageQueue={uiState.messageQueue}
+        queueMode={uiActions.queueMode}
+        onToggleMode={uiActions.toggleQueueMode}
+      />
 
       {uiState.isFeedbackDialogOpen && <FeedbackDialog />}
 
@@ -99,6 +103,8 @@ export const Composer = () => {
           setShellModeActive={uiActions.setShellModeActive}
           flushQueue={uiActions.flushQueue}
           hasQueuedMessages={uiState.messageQueue.length > 0}
+          queueMode={uiActions.queueMode}
+          toggleQueueMode={uiActions.toggleQueueMode}
           approvalMode={showAutoAcceptIndicator}
           onEscapePromptChange={uiActions.onEscapePromptChange}
           onToggleShortcuts={handleToggleShortcuts}

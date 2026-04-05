@@ -273,4 +273,142 @@ describe('useMessageQueue', () => {
     expect(mockSubmitQuery).not.toHaveBeenCalled();
     expect(result.current.messageQueue).toEqual([]);
   });
+
+  it('should initialize with all-at-once mode', () => {
+    const { result } = renderHook(() =>
+      useMessageQueue({
+        isConfigInitialized: true,
+        streamingState: StreamingState.Responding,
+        submitQuery: mockSubmitQuery,
+      }),
+    );
+
+    expect(result.current.queueMode).toBe('all-at-once');
+  });
+
+  it('should toggle between queue modes', () => {
+    const { result } = renderHook(() =>
+      useMessageQueue({
+        isConfigInitialized: true,
+        streamingState: StreamingState.Responding,
+        submitQuery: mockSubmitQuery,
+      }),
+    );
+
+    expect(result.current.queueMode).toBe('all-at-once');
+
+    act(() => {
+      result.current.toggleQueueMode();
+    });
+    expect(result.current.queueMode).toBe('one-by-one');
+
+    act(() => {
+      result.current.toggleQueueMode();
+    });
+    expect(result.current.queueMode).toBe('all-at-once');
+  });
+
+  it('should submit only first message in one-by-one mode when transitioning to Idle', () => {
+    const { result, rerender } = renderHook(
+      ({ streamingState }) =>
+        useMessageQueue({
+          isConfigInitialized: true,
+          streamingState,
+          submitQuery: mockSubmitQuery,
+        }),
+      {
+        initialProps: { streamingState: StreamingState.Responding },
+      },
+    );
+
+    // Switch to one-by-one mode
+    act(() => {
+      result.current.toggleQueueMode();
+    });
+
+    // Add messages
+    act(() => {
+      result.current.addMessage('Message 1');
+      result.current.addMessage('Message 2');
+      result.current.addMessage('Message 3');
+    });
+
+    expect(result.current.messageQueue).toEqual([
+      'Message 1',
+      'Message 2',
+      'Message 3',
+    ]);
+
+    // Transition to Idle
+    rerender({ streamingState: StreamingState.Idle });
+
+    // Only first message submitted, rest remain queued
+    expect(mockSubmitQuery).toHaveBeenCalledWith('Message 1');
+    expect(result.current.messageQueue).toEqual(['Message 2', 'Message 3']);
+  });
+
+  it('should continue submitting remaining messages in one-by-one mode across transitions', () => {
+    const { result, rerender } = renderHook(
+      ({ streamingState }) =>
+        useMessageQueue({
+          isConfigInitialized: true,
+          streamingState,
+          submitQuery: mockSubmitQuery,
+        }),
+      {
+        initialProps: { streamingState: StreamingState.Responding },
+      },
+    );
+
+    // Switch to one-by-one mode
+    act(() => {
+      result.current.toggleQueueMode();
+    });
+
+    act(() => {
+      result.current.addMessage('Msg A');
+      result.current.addMessage('Msg B');
+    });
+
+    // First transition to Idle
+    rerender({ streamingState: StreamingState.Idle });
+    expect(mockSubmitQuery).toHaveBeenCalledWith('Msg A');
+    expect(result.current.messageQueue).toEqual(['Msg B']);
+
+    // Responding again
+    rerender({ streamingState: StreamingState.Responding });
+
+    // Second transition to Idle
+    rerender({ streamingState: StreamingState.Idle });
+    expect(mockSubmitQuery).toHaveBeenCalledWith('Msg B');
+    expect(result.current.messageQueue).toEqual([]);
+    expect(mockSubmitQuery).toHaveBeenCalledTimes(2);
+  });
+
+  it('should combine all messages in all-at-once mode (default)', () => {
+    const { result, rerender } = renderHook(
+      ({ streamingState }) =>
+        useMessageQueue({
+          isConfigInitialized: true,
+          streamingState,
+          submitQuery: mockSubmitQuery,
+        }),
+      {
+        initialProps: { streamingState: StreamingState.Responding },
+      },
+    );
+
+    // Ensure we're in all-at-once mode (default)
+    expect(result.current.queueMode).toBe('all-at-once');
+
+    act(() => {
+      result.current.addMessage('First');
+      result.current.addMessage('Second');
+    });
+
+    rerender({ streamingState: StreamingState.Idle });
+
+    expect(mockSubmitQuery).toHaveBeenCalledWith('First\n\nSecond');
+    expect(result.current.messageQueue).toEqual([]);
+  });
 });

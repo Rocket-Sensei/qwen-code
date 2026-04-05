@@ -18,6 +18,7 @@ import { useShellHistory } from '../hooks/useShellHistory.js';
 import { useReverseSearchCompletion } from '../hooks/useReverseSearchCompletion.js';
 import { useCommandCompletion } from '../hooks/useCommandCompletion.js';
 import { useFollowupSuggestionsCLI } from '../hooks/useFollowupSuggestions.js';
+import { type QueueMode } from '../hooks/useMessageQueue.js';
 import type { Config } from '@qwen-code/qwen-code-core';
 import type { Key } from '../hooks/useKeypress.js';
 import { keyMatchers, Command } from '../keyMatchers.js';
@@ -77,6 +78,8 @@ export interface InputPromptProps {
   setShellModeActive: (value: boolean) => void;
   flushQueue: () => void;
   hasQueuedMessages: boolean;
+  queueMode?: QueueMode;
+  toggleQueueMode?: () => void;
   approvalMode: ApprovalMode;
   onEscapePromptChange?: (showPrompt: boolean) => void;
   onToggleShortcuts?: () => void;
@@ -112,6 +115,8 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
   setShellModeActive,
   flushQueue,
   hasQueuedMessages,
+  queueMode: _queueMode,
+  toggleQueueMode,
   approvalMode,
   onEscapePromptChange,
   onToggleShortcuts,
@@ -560,6 +565,17 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
         return true;
       }
 
+      // Toggle queue mode with Ctrl+Q when there are queued messages
+      if (
+        key.ctrl &&
+        key.name === 'q' &&
+        hasQueuedMessages &&
+        toggleQueueMode
+      ) {
+        toggleQueueMode();
+        return true;
+      }
+
       // Hide shortcuts on any other key press
       if (showShortcuts && onToggleShortcuts) {
         onToggleShortcuts();
@@ -889,9 +905,12 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
       }
 
       if (keyMatchers[Command.SUBMIT](key)) {
-        // If there are queued messages, flush them immediately
-        if (hasQueuedMessages) {
+        // Only flush queue when Enter is pressed on an EMPTY input
+        // If there's text in the buffer, the current message should be queued
+        // alongside existing messages, not trigger a flush
+        if (hasQueuedMessages && buffer.text.trim().length === 0) {
           flushQueue();
+          return true;
         }
 
         // Accept and submit prompt suggestion on Enter when input is truly empty
@@ -1019,6 +1038,7 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
       setShellModeActive,
       flushQueue,
       hasQueuedMessages,
+      toggleQueueMode,
       onClearScreen,
       inputHistory,
       handleSubmitAndClear,

@@ -19,6 +19,7 @@ import { type CodingPlanRegion } from '../../constants/codingPlan.js';
 import { type AlibabaStandardRegion } from '../../constants/alibabaStandardApiKey.js';
 import type { AuthState } from '../types.js';
 import { type ArenaDialogType } from '../hooks/useArenaCommand.js';
+import { type QueueMode } from '../hooks/useMessageQueue.js';
 // OpenAICredentials type (previously imported from OpenAIKeyPrompt)
 export interface OpenAICredentials {
   apiKey: string;
@@ -69,6 +70,8 @@ export interface UIActions {
   closePermissionsDialog: () => void;
   setShellModeActive: (value: boolean) => void;
   flushQueue: () => void;
+  queueMode: QueueMode;
+  toggleQueueMode: () => void;
   vimHandleInput: (key: Key) => boolean;
   handleIdePromptComplete: (result: IdeIntegrationNudgeResult) => void;
   handleCommandMigrationComplete: (result: CommandMigrationNudgeResult) => void;
