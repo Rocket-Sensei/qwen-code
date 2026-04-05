@@ -966,6 +966,18 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
         // No placeholder matched — fall through to BaseTextInput's default backspace
       }
 
+      // Backspace at start of input in shell mode — exit shell mode
+      if (
+        shellModeActive &&
+        buffer.text.length === 0 &&
+        (key.name === 'backspace' ||
+          key.sequence === '\x7f' ||
+          (key.ctrl && key.name === 'h'))
+      ) {
+        setShellModeActive(false);
+        return true;
+      }
+
       // Ctrl+C with completion active — also reset completion state
       if (keyMatchers[Command.CLEAR_INPUT](key)) {
         if (buffer.text.length > 0) {

@@ -1779,6 +1779,72 @@ describe('InputPrompt', () => {
       unmount();
     });
 
+    it('should disable shell mode when backspace is pressed at empty input', async () => {
+      props.shellModeActive = true;
+      props.buffer.setText('');
+
+      const { stdin, unmount } = renderWithProviders(
+        <InputPrompt {...props} />,
+      );
+      await wait();
+
+      stdin.write('\x7f'); // backspace (DEL)
+      await wait();
+
+      expect(props.setShellModeActive).toHaveBeenCalledWith(false);
+      unmount();
+    });
+
+    it('should disable shell mode when Ctrl+H (backspace equivalent) is pressed at empty input', async () => {
+      props.shellModeActive = true;
+      props.buffer.setText('');
+
+      const { stdin, unmount } = renderWithProviders(
+        <InputPrompt {...props} />,
+      );
+      await wait();
+
+      // Simulate Ctrl+H — key name 'h' with ctrl flag
+      stdin.write('\x08');
+      await wait();
+
+      expect(props.setShellModeActive).toHaveBeenCalledWith(false);
+      unmount();
+    });
+
+    it('should NOT disable shell mode on backspace when input is not empty', async () => {
+      props.shellModeActive = true;
+      props.buffer.setText('ls -la');
+
+      const { stdin, unmount } = renderWithProviders(
+        <InputPrompt {...props} />,
+      );
+      await wait();
+
+      stdin.write('\x7f'); // backspace (DEL)
+      await wait();
+
+      expect(props.setShellModeActive).not.toHaveBeenCalled();
+      expect(props.buffer.backspace).toHaveBeenCalled();
+      unmount();
+    });
+
+    it('should NOT disable shell mode on backspace when not in shell mode', async () => {
+      props.shellModeActive = false;
+      props.buffer.setText('');
+
+      const { stdin, unmount } = renderWithProviders(
+        <InputPrompt {...props} />,
+      );
+      await wait();
+
+      stdin.write('\x7f'); // backspace (DEL)
+      await wait();
+
+      expect(props.setShellModeActive).not.toHaveBeenCalled();
+      unmount();
+    });
+
     it('should handle ESC when completion suggestions are showing', async () => {
       mockedUseCommandCompletion.mockReturnValue({
         ...mockCommandCompletion,
