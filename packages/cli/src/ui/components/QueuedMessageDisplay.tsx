@@ -58,15 +58,32 @@ export const QueuedMessageDisplay = ({
 
   // Truncate the "Queued" label to fit the header row
   const queuedLabel = truncateToVisualWidth('Queued', availableWidth);
+  // Truncate the description to fit the header row
+  const description = truncateToVisualWidth(
+    'will send when task done',
+    availableWidth,
+  );
 
   return (
-    <Box flexDirection="column" marginTop={1}>
-      {/* Header row: "Queued" label */}
+    <Box
+      flexDirection="column"
+      marginTop={1}
+      borderStyle="single"
+      borderTop={true}
+      borderBottom={true}
+      borderLeft={true}
+      borderRight={false}
+      borderColor={theme.status.warningDim}
+    >
+      {/* Header row: "Queued" label + description */}
       <Box paddingLeft={PADDING_LEFT} overflow="hidden">
         <Text color={theme.status.warningDim} bold>
           {queuedLabel}
         </Text>
-        <Text color={theme.text.secondary}> ({messageQueue.length})</Text>
+        <Text color={theme.text.secondary}> ({messageQueue.length}) — </Text>
+        <Text color={theme.text.secondary} dimColor>
+          {description}
+        </Text>
       </Box>
       {messageQueue
         .slice(0, MAX_DISPLAYED_QUEUED_MESSAGES)
