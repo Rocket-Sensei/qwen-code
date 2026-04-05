@@ -288,7 +288,7 @@ describe('useMessageQueue', () => {
     expect(result.current.messageQueue).toEqual([]);
   });
 
-  it('should cancel ongoing request then submit when flushing while WaitingForConfirmation', () => {
+  it('should NOT clear queue when flushing while WaitingForConfirmation (defers to auto-submit)', () => {
     const { result } = renderHook(() =>
       useMessageQueue(
         makeOptions({ streamingState: StreamingState.WaitingForConfirmation }),
@@ -303,8 +303,39 @@ describe('useMessageQueue', () => {
       result.current.flushQueue();
     });
 
-    expect(mockCancelOngoingRequest).toHaveBeenCalledTimes(1);
-    expect(mockSubmitQuery).toHaveBeenCalledWith('Urgent message');
+    // cancelOngoingRequest is a no-op for WaitingForConfirmation,
+    // so flushQueue intentionally does NOT clear the queue or call
+    // submitQuery — messages would be lost otherwise. The auto-submit
+    // useEffect will handle them when state transitions to Idle.
+    expect(mockCancelOngoingRequest).not.toHaveBeenCalled();
+    expect(mockSubmitQuery).not.toHaveBeenCalled();
+    // Queue is preserved — will be submitted when state becomes Idle
+    expect(result.current.messageQueue).toEqual(['Urgent message']);
+  });
+
+  it('should auto-submit deferred flush queue when state transitions from WaitingForConfirmation to Idle', () => {
+    const { result, rerender } = renderHook(
+      ({ streamingState }) => useMessageQueue(makeOptions({ streamingState })),
+      {
+        initialProps: { streamingState: StreamingState.WaitingForConfirmation },
+      },
+    );
+
+    act(() => {
+      result.current.addMessage('Deferred message');
+    });
+
+    // Flush while WaitingForConfirmation — queue preserved
+    act(() => {
+      result.current.flushQueue();
+    });
+    expect(result.current.messageQueue).toEqual(['Deferred message']);
+    expect(mockSubmitQuery).not.toHaveBeenCalled();
+
+    // State transitions to Idle — auto-submit fires
+    rerender({ streamingState: StreamingState.Idle });
+
+    expect(mockSubmitQuery).toHaveBeenCalledWith('Deferred message');
     expect(result.current.messageQueue).toEqual([]);
   });
 
