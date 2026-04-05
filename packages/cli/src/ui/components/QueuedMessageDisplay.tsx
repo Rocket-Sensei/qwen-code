@@ -8,6 +8,7 @@ import { Box, Text } from 'ink';
 import stringWidth from 'string-width';
 import { useTerminalSize } from '../hooks/useTerminalSize.js';
 import { theme } from '../semantic-colors.js';
+import { type QueueMode } from '../hooks/useMessageQueue.js';
 
 const MAX_DISPLAYED_QUEUED_MESSAGES = 3;
 const PADDING_LEFT = 2;
@@ -44,10 +45,14 @@ function truncateToVisualWidth(text: string, maxWidth: number): string {
 
 export interface QueuedMessageDisplayProps {
   messageQueue: string[];
+  queueMode?: QueueMode;
+  onToggleMode?: () => void;
 }
 
 export const QueuedMessageDisplay = ({
   messageQueue,
+  queueMode = 'all-at-once',
+  onToggleMode: _onToggleMode,
 }: QueuedMessageDisplayProps) => {
   const { columns } = useTerminalSize();
   const availableWidth = columns - PADDING_LEFT - RIGHT_MARGIN;
@@ -58,9 +63,13 @@ export const QueuedMessageDisplay = ({
 
   // Truncate the "Queued" label to fit the header row
   const queuedLabel = truncateToVisualWidth('Queued', availableWidth);
+  // Mode badge: short label for the current mode
+  const modeBadge = queueMode === 'one-by-one' ? '1×1' : 'all';
   // Truncate the description to fit the header row
   const description = truncateToVisualWidth(
-    'will send when task done',
+    queueMode === 'one-by-one'
+      ? 'sends one at a time when task done'
+      : 'will send when task done',
     availableWidth,
   );
 
@@ -75,12 +84,23 @@ export const QueuedMessageDisplay = ({
       borderRight={false}
       borderColor={theme.status.warningDim}
     >
-      {/* Header row: "Queued" label + description */}
+      {/* Header row: "Queued" label + count + mode badge + description */}
       <Box paddingLeft={PADDING_LEFT} overflow="hidden">
         <Text color={theme.status.warningDim} bold>
           {queuedLabel}
         </Text>
-        <Text color={theme.text.secondary}> ({messageQueue.length}) — </Text>
+        <Text color={theme.text.secondary}> ({messageQueue.length}) </Text>
+        <Text
+          color={
+            queueMode === 'one-by-one'
+              ? theme.status.warningDim
+              : theme.text.secondary
+          }
+          bold={queueMode === 'one-by-one'}
+        >
+          [{modeBadge}]
+        </Text>
+        <Text color={theme.text.secondary}> — </Text>
         <Text color={theme.text.secondary} dimColor>
           {description}
         </Text>

@@ -244,6 +244,8 @@ describe('AppContainer State Management', () => {
       clearQueue: vi.fn(),
       flushQueue: vi.fn(),
       getQueuedMessagesText: vi.fn().mockReturnValue(''),
+      queueMode: 'all-at-once',
+      toggleQueueMode: vi.fn(),
     });
     mockedUseAutoAcceptIndicator.mockReturnValue(false);
     mockedUseGitBranchName.mockReturnValue('main');
