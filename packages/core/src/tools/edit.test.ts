@@ -68,6 +68,7 @@ describe('EditTool', () => {
       getTargetDir: () => rootDir,
       getApprovalMode: vi.fn(),
       setApprovalMode: vi.fn(),
+      getOnPersistApprovalMode: vi.fn(),
       getWorkspaceContext: () => createMockWorkspaceContext(rootDir),
       getFileSystemService: () => new StandardFileSystemService(),
       getIdeMode: () => false,
@@ -964,6 +965,107 @@ describe('EditTool', () => {
 
       expect(ideClient.openDiff).not.toHaveBeenCalled();
       expect((confirmation as any).ideConfirmation).toBeUndefined();
+    });
+  });
+
+  describe('onConfirm persistence', () => {
+    let filePath: string;
+
+    it('should call setApprovalMode and persist callback on ProceedAlwaysProject', async () => {
+      filePath = path.join(rootDir, 'test-persist-project.txt');
+      const initialContent = 'old content';
+      fs.writeFileSync(filePath, initialContent);
+      const params: EditToolParams = {
+        file_path: filePath,
+        old_string: 'old',
+        new_string: 'new',
+      };
+      const mockPersistFn = vi.fn().mockResolvedValue(undefined);
+      (mockConfig.getOnPersistApprovalMode as Mock).mockReturnValue(
+        mockPersistFn,
+      );
+
+      const invocation = tool.build(params);
+      const confirmation = await invocation.getConfirmationDetails(
+        new AbortController().signal,
+      );
+
+      expect(confirmation && 'onConfirm' in confirmation).toBe(true);
+      if (confirmation && 'onConfirm' in confirmation) {
+        await confirmation.onConfirm(
+          ToolConfirmationOutcome.ProceedAlwaysProject,
+        );
+      }
+
+      expect(mockConfig.setApprovalMode).toHaveBeenCalledWith(
+        ApprovalMode.AUTO_EDIT,
+      );
+      expect(mockPersistFn).toHaveBeenCalledWith(
+        'project',
+        ApprovalMode.AUTO_EDIT,
+      );
+    });
+
+    it('should call setApprovalMode and persist callback on ProceedAlwaysUser', async () => {
+      filePath = path.join(rootDir, 'test-persist-user.txt');
+      const initialContent = 'old content';
+      fs.writeFileSync(filePath, initialContent);
+      const params: EditToolParams = {
+        file_path: filePath,
+        old_string: 'old',
+        new_string: 'new',
+      };
+      const mockPersistFn = vi.fn().mockResolvedValue(undefined);
+      (mockConfig.getOnPersistApprovalMode as Mock).mockReturnValue(
+        mockPersistFn,
+      );
+
+      const invocation = tool.build(params);
+      const confirmation = await invocation.getConfirmationDetails(
+        new AbortController().signal,
+      );
+
+      expect(confirmation && 'onConfirm' in confirmation).toBe(true);
+      if (confirmation && 'onConfirm' in confirmation) {
+        await confirmation.onConfirm(ToolConfirmationOutcome.ProceedAlwaysUser);
+      }
+
+      expect(mockConfig.setApprovalMode).toHaveBeenCalledWith(
+        ApprovalMode.AUTO_EDIT,
+      );
+      expect(mockPersistFn).toHaveBeenCalledWith(
+        'user',
+        ApprovalMode.AUTO_EDIT,
+      );
+    });
+
+    it('should not throw when persist callback is undefined', async () => {
+      filePath = path.join(rootDir, 'test-persist-undefined.txt');
+      const initialContent = 'old content';
+      fs.writeFileSync(filePath, initialContent);
+      const params: EditToolParams = {
+        file_path: filePath,
+        old_string: 'old',
+        new_string: 'new',
+      };
+      (mockConfig.getOnPersistApprovalMode as Mock).mockReturnValue(undefined);
+
+      const invocation = tool.build(params);
+      const confirmation = await invocation.getConfirmationDetails(
+        new AbortController().signal,
+      );
+
+      expect(confirmation && 'onConfirm' in confirmation).toBe(true);
+      if (confirmation && 'onConfirm' in confirmation) {
+        // Should not throw
+        await confirmation.onConfirm(
+          ToolConfirmationOutcome.ProceedAlwaysProject,
+        );
+      }
+
+      expect(mockConfig.setApprovalMode).toHaveBeenCalledWith(
+        ApprovalMode.AUTO_EDIT,
+      );
     });
   });
 });

@@ -450,6 +450,20 @@ export interface ConfigParameters {
     ruleType: 'allow' | 'ask' | 'deny',
     rule: string,
   ) => Promise<void>;
+
+  /**
+   * Callback to persist approval mode to settings files.
+   * Injected by the CLI layer; core uses this to persist `auto-edit` or `yolo`
+   * to project or user settings when the user clicks "Always allow in this project"
+   * or "Always allow for this user" on an edit confirmation.
+   *
+   * @param scope - 'project' for workspace settings, 'user' for user settings.
+   * @param mode - The ApprovalMode to persist (e.g. 'auto-edit', 'yolo').
+   */
+  onPersistApprovalMode?: (
+    scope: 'project' | 'user',
+    mode: string,
+  ) => Promise<void>;
 }
 
 function normalizeConfigOutputFormat(
@@ -597,6 +611,10 @@ export class Config {
     ruleType: 'allow' | 'ask' | 'deny',
     rule: string,
   ) => Promise<void>;
+  private readonly onPersistApprovalModeCallback?: (
+    scope: 'project' | 'user',
+    mode: string,
+  ) => Promise<void>;
   private initialized: boolean = false;
   readonly storage: Storage;
   private readonly fileExclusions: FileExclusions;
@@ -708,6 +726,7 @@ export class Config {
     this.skipStartupContext = params.skipStartupContext ?? false;
     this.warnings = params.warnings ?? [];
     this.onPersistPermissionRuleCallback = params.onPersistPermissionRule;
+    this.onPersistApprovalModeCallback = params.onPersistApprovalMode;
 
     // Web search
     this.webSearch = params.webSearch;
@@ -2128,6 +2147,16 @@ export class Config {
       ) => Promise<void>)
     | undefined {
     return this.onPersistPermissionRuleCallback;
+  }
+
+  /**
+   * Returns the callback for persisting approval mode to settings files.
+   * Returns undefined if no callback was provided (e.g. SDK mode).
+   */
+  getOnPersistApprovalMode():
+    | ((scope: 'project' | 'user', mode: string) => Promise<void>)
+    | undefined {
+    return this.onPersistApprovalModeCallback;
   }
 
   async createToolRegistry(

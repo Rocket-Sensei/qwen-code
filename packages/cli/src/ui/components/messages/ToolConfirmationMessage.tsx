@@ -215,6 +215,16 @@ export const ToolConfirmationMessage: React.FC<
         value: ToolConfirmationOutcome.ProceedAlways,
         key: 'Yes, allow always',
       });
+      options.push({
+        label: t('Always allow edits in this project'),
+        value: ToolConfirmationOutcome.ProceedAlwaysProject,
+        key: 'Always allow edits in this project',
+      });
+      options.push({
+        label: t('Always allow edits for this user'),
+        value: ToolConfirmationOutcome.ProceedAlwaysUser,
+        key: 'Always allow edits for this user',
+      });
     }
     if ((!config.getIdeMode() || !isDiffingEnabled) && preferredEditor) {
       options.push({

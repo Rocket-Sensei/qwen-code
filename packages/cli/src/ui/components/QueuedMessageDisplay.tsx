@@ -104,6 +104,15 @@ export const QueuedMessageDisplay = ({
         <Text color={theme.text.secondary} dimColor>
           {description}
         </Text>
+        <Text color={theme.text.secondary} dimColor>
+          {' '}
+          (
+        </Text>
+        <Text color={theme.text.accent}>ctrl+q</Text>
+        <Text color={theme.text.secondary} dimColor>
+          {' '}
+          to toggle)
+        </Text>
       </Box>
       {messageQueue
         .slice(0, MAX_DISPLAYED_QUEUED_MESSAGES)
