@@ -139,6 +139,36 @@ describe('useMessageQueue', () => {
     expect(result.current.messageQueue).toEqual([]);
   });
 
+  it('should auto-submit queued messages when config initializes while idle', () => {
+    const { result, rerender } = renderHook(
+      ({ isConfigInitialized }) =>
+        useMessageQueue(
+          makeOptions({
+            isConfigInitialized,
+            streamingState: StreamingState.Idle,
+          }),
+        ),
+      {
+        initialProps: { isConfigInitialized: false },
+      },
+    );
+
+    // Add messages while config is not initialized
+    act(() => {
+      result.current.addMessage('Message A');
+      result.current.addMessage('Message B');
+    });
+
+    expect(result.current.messageQueue).toEqual(['Message A', 'Message B']);
+    expect(mockSubmitQuery).not.toHaveBeenCalled();
+
+    // Config becomes initialized while already idle
+    rerender({ isConfigInitialized: true });
+
+    expect(mockSubmitQuery).toHaveBeenCalledWith('Message A\n\nMessage B');
+    expect(result.current.messageQueue).toEqual([]);
+  });
+
   it('should not auto-submit when queue is empty', () => {
     const { rerender } = renderHook(
       ({ streamingState }) => useMessageQueue(makeOptions({ streamingState })),
