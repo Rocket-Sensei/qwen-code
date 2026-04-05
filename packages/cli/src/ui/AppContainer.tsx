@@ -786,6 +786,7 @@ export const AppContainer = (props: AppContainerProps) => {
     isConfigInitialized,
     streamingState,
     submitQuery,
+    cancelOngoingRequest,
   });
 
   // Callback for handling final submit (must be after addMessage from useMessageQueue)
@@ -925,7 +926,17 @@ export const AppContainer = (props: AppContainerProps) => {
         speculationRef.current = IDLE_SPECULATION;
       }
 
-      addMessage(submittedValue);
+      // When the queue is empty and either config is not yet initialized or LLM is idle,
+      // submit directly instead of queuing. This ensures the first message in a session
+      // is sent directly, not queued.
+      if (
+        messageQueue.length === 0 &&
+        (!isConfigInitialized || streamingState === StreamingState.Idle)
+      ) {
+        submitQuery(submittedValue);
+      } else {
+        addMessage(submittedValue);
+      }
     },
     [
       addMessage,
@@ -935,6 +946,8 @@ export const AppContainer = (props: AppContainerProps) => {
       config,
       geminiClient,
       historyManager,
+      messageQueue,
+      isConfigInitialized,
     ],
   );
 

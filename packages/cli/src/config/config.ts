@@ -1051,6 +1051,13 @@ export async function loadCliConfig(
         currentSettings.setValue(settingScope, key, [...currentRules, rule]);
       }
     },
+    // Approval mode persistence callback (writes to settings files).
+    onPersistApprovalMode: async (scope, mode) => {
+      const currentSettings = loadSettings(cwd);
+      const settingScope =
+        scope === 'project' ? SettingScope.Workspace : SettingScope.User;
+      currentSettings.setValue(settingScope, 'tools.approvalMode', mode);
+    },
     toolDiscoveryCommand: settings.tools?.discoveryCommand,
     toolCallCommand: settings.tools?.callCommand,
     mcpServerCommand: settings.mcp?.serverCommand,

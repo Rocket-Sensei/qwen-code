@@ -11,9 +11,11 @@ import { StreamingState } from '../types.js';
 
 describe('useMessageQueue', () => {
   let mockSubmitQuery: ReturnType<typeof vi.fn>;
+  let mockCancelOngoingRequest: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     mockSubmitQuery = vi.fn();
+    mockCancelOngoingRequest = vi.fn();
     vi.useFakeTimers();
   });
 
@@ -22,14 +24,19 @@ describe('useMessageQueue', () => {
     vi.clearAllMocks();
   });
 
+  const makeOptions = (
+    overrides: Partial<Parameters<typeof useMessageQueue>[0]> = {},
+  ) =>
+    ({
+      isConfigInitialized: true,
+      streamingState: StreamingState.Idle,
+      submitQuery: mockSubmitQuery,
+      cancelOngoingRequest: mockCancelOngoingRequest,
+      ...overrides,
+    }) as Parameters<typeof useMessageQueue>[0];
+
   it('should initialize with empty queue', () => {
-    const { result } = renderHook(() =>
-      useMessageQueue({
-        isConfigInitialized: true,
-        streamingState: StreamingState.Idle,
-        submitQuery: mockSubmitQuery,
-      }),
-    );
+    const { result } = renderHook(() => useMessageQueue(makeOptions()));
 
     expect(result.current.messageQueue).toEqual([]);
     expect(result.current.getQueuedMessagesText()).toBe('');
@@ -37,11 +44,9 @@ describe('useMessageQueue', () => {
 
   it('should add messages to queue', () => {
     const { result } = renderHook(() =>
-      useMessageQueue({
-        isConfigInitialized: true,
-        streamingState: StreamingState.Responding,
-        submitQuery: mockSubmitQuery,
-      }),
+      useMessageQueue(
+        makeOptions({ streamingState: StreamingState.Responding }),
+      ),
     );
 
     act(() => {
@@ -57,17 +62,15 @@ describe('useMessageQueue', () => {
 
   it('should filter out empty messages', () => {
     const { result } = renderHook(() =>
-      useMessageQueue({
-        isConfigInitialized: true,
-        streamingState: StreamingState.Responding,
-        submitQuery: mockSubmitQuery,
-      }),
+      useMessageQueue(
+        makeOptions({ streamingState: StreamingState.Responding }),
+      ),
     );
 
     act(() => {
       result.current.addMessage('Valid message');
-      result.current.addMessage('   '); // Only whitespace
-      result.current.addMessage(''); // Empty
+      result.current.addMessage('   ');
+      result.current.addMessage('');
       result.current.addMessage('Another valid message');
     });
 
@@ -79,11 +82,9 @@ describe('useMessageQueue', () => {
 
   it('should clear queue', () => {
     const { result } = renderHook(() =>
-      useMessageQueue({
-        isConfigInitialized: true,
-        streamingState: StreamingState.Responding,
-        submitQuery: mockSubmitQuery,
-      }),
+      useMessageQueue(
+        makeOptions({ streamingState: StreamingState.Responding }),
+      ),
     );
 
     act(() => {
@@ -101,11 +102,9 @@ describe('useMessageQueue', () => {
 
   it('should return queued messages as text with double newlines', () => {
     const { result } = renderHook(() =>
-      useMessageQueue({
-        isConfigInitialized: true,
-        streamingState: StreamingState.Responding,
-        submitQuery: mockSubmitQuery,
-      }),
+      useMessageQueue(
+        makeOptions({ streamingState: StreamingState.Responding }),
+      ),
     );
 
     act(() => {
@@ -121,18 +120,12 @@ describe('useMessageQueue', () => {
 
   it('should auto-submit queued messages when transitioning to Idle', () => {
     const { result, rerender } = renderHook(
-      ({ streamingState }) =>
-        useMessageQueue({
-          isConfigInitialized: true,
-          streamingState,
-          submitQuery: mockSubmitQuery,
-        }),
+      ({ streamingState }) => useMessageQueue(makeOptions({ streamingState })),
       {
         initialProps: { streamingState: StreamingState.Responding },
       },
     );
 
-    // Add some messages
     act(() => {
       result.current.addMessage('Message 1');
       result.current.addMessage('Message 2');
@@ -140,7 +133,6 @@ describe('useMessageQueue', () => {
 
     expect(result.current.messageQueue).toEqual(['Message 1', 'Message 2']);
 
-    // Transition to Idle
     rerender({ streamingState: StreamingState.Idle });
 
     expect(mockSubmitQuery).toHaveBeenCalledWith('Message 1\n\nMessage 2');
@@ -149,18 +141,12 @@ describe('useMessageQueue', () => {
 
   it('should not auto-submit when queue is empty', () => {
     const { rerender } = renderHook(
-      ({ streamingState }) =>
-        useMessageQueue({
-          isConfigInitialized: true,
-          streamingState,
-          submitQuery: mockSubmitQuery,
-        }),
+      ({ streamingState }) => useMessageQueue(makeOptions({ streamingState })),
       {
         initialProps: { streamingState: StreamingState.Responding },
       },
     );
 
-    // Transition to Idle with empty queue
     rerender({ streamingState: StreamingState.Idle });
 
     expect(mockSubmitQuery).not.toHaveBeenCalled();
@@ -168,23 +154,16 @@ describe('useMessageQueue', () => {
 
   it('should not auto-submit when not transitioning to Idle', () => {
     const { result, rerender } = renderHook(
-      ({ streamingState }) =>
-        useMessageQueue({
-          isConfigInitialized: true,
-          streamingState,
-          submitQuery: mockSubmitQuery,
-        }),
+      ({ streamingState }) => useMessageQueue(makeOptions({ streamingState })),
       {
         initialProps: { streamingState: StreamingState.Responding },
       },
     );
 
-    // Add messages
     act(() => {
       result.current.addMessage('Message 1');
     });
 
-    // Transition to WaitingForConfirmation (not Idle)
     rerender({ streamingState: StreamingState.WaitingForConfirmation });
 
     expect(mockSubmitQuery).not.toHaveBeenCalled();
@@ -193,40 +172,29 @@ describe('useMessageQueue', () => {
 
   it('should handle multiple state transitions correctly', () => {
     const { result, rerender } = renderHook(
-      ({ streamingState }) =>
-        useMessageQueue({
-          isConfigInitialized: true,
-          streamingState,
-          submitQuery: mockSubmitQuery,
-        }),
+      ({ streamingState }) => useMessageQueue(makeOptions({ streamingState })),
       {
         initialProps: { streamingState: StreamingState.Idle },
       },
     );
 
-    // Start responding
     rerender({ streamingState: StreamingState.Responding });
 
-    // Add messages while responding
     act(() => {
       result.current.addMessage('First batch');
     });
 
-    // Go back to idle - should submit
     rerender({ streamingState: StreamingState.Idle });
 
     expect(mockSubmitQuery).toHaveBeenCalledWith('First batch');
     expect(result.current.messageQueue).toEqual([]);
 
-    // Start responding again
     rerender({ streamingState: StreamingState.Responding });
 
-    // Add more messages
     act(() => {
       result.current.addMessage('Second batch');
     });
 
-    // Go back to idle - should submit again
     rerender({ streamingState: StreamingState.Idle });
 
     expect(mockSubmitQuery).toHaveBeenCalledWith('Second batch');
@@ -235,11 +203,7 @@ describe('useMessageQueue', () => {
 
   it('should flush queue immediately and submit combined message', () => {
     const { result } = renderHook(() =>
-      useMessageQueue({
-        isConfigInitialized: true,
-        streamingState: StreamingState.Responding,
-        submitQuery: mockSubmitQuery,
-      }),
+      useMessageQueue(makeOptions({ streamingState: StreamingState.Idle })),
     );
 
     act(() => {
@@ -255,15 +219,14 @@ describe('useMessageQueue', () => {
 
     expect(mockSubmitQuery).toHaveBeenCalledWith('Message 1\n\nMessage 2');
     expect(result.current.messageQueue).toEqual([]);
+    expect(mockCancelOngoingRequest).not.toHaveBeenCalled();
   });
 
   it('should not submit when flushing empty queue', () => {
     const { result } = renderHook(() =>
-      useMessageQueue({
-        isConfigInitialized: true,
-        streamingState: StreamingState.Responding,
-        submitQuery: mockSubmitQuery,
-      }),
+      useMessageQueue(
+        makeOptions({ streamingState: StreamingState.Responding }),
+      ),
     );
 
     act(() => {
@@ -274,13 +237,52 @@ describe('useMessageQueue', () => {
     expect(result.current.messageQueue).toEqual([]);
   });
 
+  it('should cancel ongoing request then submit when flushing while Responding', () => {
+    const { result } = renderHook(() =>
+      useMessageQueue(
+        makeOptions({ streamingState: StreamingState.Responding }),
+      ),
+    );
+
+    act(() => {
+      result.current.addMessage('Message 1');
+      result.current.addMessage('Message 2');
+    });
+
+    act(() => {
+      result.current.flushQueue();
+    });
+
+    expect(mockCancelOngoingRequest).toHaveBeenCalledTimes(1);
+    expect(mockSubmitQuery).toHaveBeenCalledWith('Message 1\n\nMessage 2');
+    expect(result.current.messageQueue).toEqual([]);
+  });
+
+  it('should cancel ongoing request then submit when flushing while WaitingForConfirmation', () => {
+    const { result } = renderHook(() =>
+      useMessageQueue(
+        makeOptions({ streamingState: StreamingState.WaitingForConfirmation }),
+      ),
+    );
+
+    act(() => {
+      result.current.addMessage('Urgent message');
+    });
+
+    act(() => {
+      result.current.flushQueue();
+    });
+
+    expect(mockCancelOngoingRequest).toHaveBeenCalledTimes(1);
+    expect(mockSubmitQuery).toHaveBeenCalledWith('Urgent message');
+    expect(result.current.messageQueue).toEqual([]);
+  });
+
   it('should initialize with all-at-once mode', () => {
     const { result } = renderHook(() =>
-      useMessageQueue({
-        isConfigInitialized: true,
-        streamingState: StreamingState.Responding,
-        submitQuery: mockSubmitQuery,
-      }),
+      useMessageQueue(
+        makeOptions({ streamingState: StreamingState.Responding }),
+      ),
     );
 
     expect(result.current.queueMode).toBe('all-at-once');
@@ -288,11 +290,9 @@ describe('useMessageQueue', () => {
 
   it('should toggle between queue modes', () => {
     const { result } = renderHook(() =>
-      useMessageQueue({
-        isConfigInitialized: true,
-        streamingState: StreamingState.Responding,
-        submitQuery: mockSubmitQuery,
-      }),
+      useMessageQueue(
+        makeOptions({ streamingState: StreamingState.Responding }),
+      ),
     );
 
     expect(result.current.queueMode).toBe('all-at-once');
@@ -310,23 +310,16 @@ describe('useMessageQueue', () => {
 
   it('should submit only first message in one-by-one mode when transitioning to Idle', () => {
     const { result, rerender } = renderHook(
-      ({ streamingState }) =>
-        useMessageQueue({
-          isConfigInitialized: true,
-          streamingState,
-          submitQuery: mockSubmitQuery,
-        }),
+      ({ streamingState }) => useMessageQueue(makeOptions({ streamingState })),
       {
         initialProps: { streamingState: StreamingState.Responding },
       },
     );
 
-    // Switch to one-by-one mode
     act(() => {
       result.current.toggleQueueMode();
     });
 
-    // Add messages
     act(() => {
       result.current.addMessage('Message 1');
       result.current.addMessage('Message 2');
@@ -339,28 +332,20 @@ describe('useMessageQueue', () => {
       'Message 3',
     ]);
 
-    // Transition to Idle
     rerender({ streamingState: StreamingState.Idle });
 
-    // Only first message submitted, rest remain queued
     expect(mockSubmitQuery).toHaveBeenCalledWith('Message 1');
     expect(result.current.messageQueue).toEqual(['Message 2', 'Message 3']);
   });
 
   it('should continue submitting remaining messages in one-by-one mode across transitions', () => {
     const { result, rerender } = renderHook(
-      ({ streamingState }) =>
-        useMessageQueue({
-          isConfigInitialized: true,
-          streamingState,
-          submitQuery: mockSubmitQuery,
-        }),
+      ({ streamingState }) => useMessageQueue(makeOptions({ streamingState })),
       {
         initialProps: { streamingState: StreamingState.Responding },
       },
     );
 
-    // Switch to one-by-one mode
     act(() => {
       result.current.toggleQueueMode();
     });
@@ -370,15 +355,12 @@ describe('useMessageQueue', () => {
       result.current.addMessage('Msg B');
     });
 
-    // First transition to Idle
     rerender({ streamingState: StreamingState.Idle });
     expect(mockSubmitQuery).toHaveBeenCalledWith('Msg A');
     expect(result.current.messageQueue).toEqual(['Msg B']);
 
-    // Responding again
     rerender({ streamingState: StreamingState.Responding });
 
-    // Second transition to Idle
     rerender({ streamingState: StreamingState.Idle });
     expect(mockSubmitQuery).toHaveBeenCalledWith('Msg B');
     expect(result.current.messageQueue).toEqual([]);
@@ -387,18 +369,12 @@ describe('useMessageQueue', () => {
 
   it('should combine all messages in all-at-once mode (default)', () => {
     const { result, rerender } = renderHook(
-      ({ streamingState }) =>
-        useMessageQueue({
-          isConfigInitialized: true,
-          streamingState,
-          submitQuery: mockSubmitQuery,
-        }),
+      ({ streamingState }) => useMessageQueue(makeOptions({ streamingState })),
       {
         initialProps: { streamingState: StreamingState.Responding },
       },
     );
 
-    // Ensure we're in all-at-once mode (default)
     expect(result.current.queueMode).toBe('all-at-once');
 
     act(() => {

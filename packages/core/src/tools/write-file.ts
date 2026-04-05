@@ -165,6 +165,20 @@ class WriteFileToolInvocation extends BaseToolInvocation<
         if (outcome === ToolConfirmationOutcome.ProceedAlways) {
           this.config.setApprovalMode(ApprovalMode.AUTO_EDIT);
         }
+        if (
+          outcome === ToolConfirmationOutcome.ProceedAlwaysProject ||
+          outcome === ToolConfirmationOutcome.ProceedAlwaysUser
+        ) {
+          const scope =
+            outcome === ToolConfirmationOutcome.ProceedAlwaysProject
+              ? 'project'
+              : 'user';
+          this.config.setApprovalMode(ApprovalMode.AUTO_EDIT);
+          await this.config.getOnPersistApprovalMode()?.(
+            scope,
+            ApprovalMode.AUTO_EDIT,
+          );
+        }
 
         if (ideConfirmation) {
           const result = await ideConfirmation;

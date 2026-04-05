@@ -14,6 +14,7 @@ export interface UseMessageQueueOptions {
   isConfigInitialized: boolean;
   streamingState: StreamingState;
   submitQuery: (query: string) => void;
+  cancelOngoingRequest: () => void;
 }
 
 export interface UseMessageQueueReturn {
@@ -35,6 +36,7 @@ export function useMessageQueue({
   isConfigInitialized,
   streamingState,
   submitQuery,
+  cancelOngoingRequest,
 }: UseMessageQueueOptions): UseMessageQueueReturn {
   const [messageQueue, setMessageQueue] = useState<string[]>([]);
   const [queueMode, setQueueMode] = useState<QueueMode>('all-at-once');
@@ -64,14 +66,23 @@ export function useMessageQueue({
     );
   }, []);
 
-  // Flush queue: immediately submit all queued messages (combined)
+  // Flush queue: cancel ongoing request (if any) and immediately submit all queued messages
   const flushQueue = useCallback(() => {
     if (messageQueue.length > 0) {
       const combinedMessage = messageQueue.join('\n\n');
       setMessageQueue([]);
+
+      // Cancel the ongoing request if the model is currently responding,
+      // otherwise submitQuery will return early and the messages will be lost.
+      if (
+        streamingState === StreamingState.Responding ||
+        streamingState === StreamingState.WaitingForConfirmation
+      ) {
+        cancelOngoingRequest();
+      }
       submitQuery(combinedMessage);
     }
-  }, [messageQueue, submitQuery]);
+  }, [messageQueue, streamingState, submitQuery, cancelOngoingRequest]);
 
   // Get all queued messages as a single text string
   const getQueuedMessagesText = useCallback(() => {

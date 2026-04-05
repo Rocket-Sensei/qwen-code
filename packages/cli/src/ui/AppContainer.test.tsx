@@ -246,6 +246,7 @@ describe('AppContainer State Management', () => {
       getQueuedMessagesText: vi.fn().mockReturnValue(''),
       queueMode: 'all-at-once',
       toggleQueueMode: vi.fn(),
+      cancelOngoingRequest: vi.fn(),
     });
     mockedUseAutoAcceptIndicator.mockReturnValue(false);
     mockedUseGitBranchName.mockReturnValue('main');
@@ -458,6 +459,9 @@ describe('AppContainer State Management', () => {
         addMessage: mockQueueMessage,
         clearQueue: vi.fn(),
         getQueuedMessagesText: vi.fn().mockReturnValue(''),
+        queueMode: 'all-at-once',
+        toggleQueueMode: vi.fn(),
+        cancelOngoingRequest: vi.fn(),
       });
 
       render(
@@ -473,6 +477,86 @@ describe('AppContainer State Management', () => {
 
       expect(mockSubmitQuery).toHaveBeenCalledWith('/btw quick side question');
       expect(mockQueueMessage).not.toHaveBeenCalled();
+    });
+
+    it('submits directly when queue is empty and LLM is idle', () => {
+      const mockSubmitQuery = vi.fn();
+      const mockQueueMessage = vi.fn();
+
+      mockedUseGeminiStream.mockReturnValue({
+        streamingState: 'idle',
+        submitQuery: mockSubmitQuery,
+        initError: null,
+        pendingHistoryItems: [],
+        thought: null,
+        cancelOngoingRequest: vi.fn(),
+        retryLastPrompt: vi.fn(),
+      });
+      mockedUseMessageQueue.mockReturnValue({
+        messageQueue: [],
+        addMessage: mockQueueMessage,
+        clearQueue: vi.fn(),
+        flushQueue: vi.fn(),
+        getQueuedMessagesText: vi.fn().mockReturnValue(''),
+        queueMode: 'all-at-once',
+        toggleQueueMode: vi.fn(),
+        cancelOngoingRequest: vi.fn(),
+      });
+
+      render(
+        <AppContainer
+          config={mockConfig}
+          settings={mockSettings}
+          version="1.0.0"
+          initializationResult={mockInitResult}
+        />,
+      );
+
+      capturedUIActions.handleFinalSubmit('Hello, this is a test message');
+
+      expect(mockSubmitQuery).toHaveBeenCalledWith(
+        'Hello, this is a test message',
+      );
+      expect(mockQueueMessage).not.toHaveBeenCalled();
+    });
+
+    it('queues message when queue has existing messages and LLM is idle', () => {
+      const mockSubmitQuery = vi.fn();
+      const mockQueueMessage = vi.fn();
+
+      mockedUseGeminiStream.mockReturnValue({
+        streamingState: 'idle',
+        submitQuery: mockSubmitQuery,
+        initError: null,
+        pendingHistoryItems: [],
+        thought: null,
+        cancelOngoingRequest: vi.fn(),
+        retryLastPrompt: vi.fn(),
+      });
+      mockedUseMessageQueue.mockReturnValue({
+        messageQueue: ['Existing queued message'],
+        addMessage: mockQueueMessage,
+        clearQueue: vi.fn(),
+        flushQueue: vi.fn(),
+        getQueuedMessagesText: vi.fn().mockReturnValue(''),
+        queueMode: 'all-at-once',
+        toggleQueueMode: vi.fn(),
+        cancelOngoingRequest: vi.fn(),
+      });
+
+      render(
+        <AppContainer
+          config={mockConfig}
+          settings={mockSettings}
+          version="1.0.0"
+          initializationResult={mockInitResult}
+        />,
+      );
+
+      capturedUIActions.handleFinalSubmit('New message to queue');
+
+      expect(mockQueueMessage).toHaveBeenCalledWith('New message to queue');
+      expect(mockSubmitQuery).not.toHaveBeenCalled();
     });
   });
 
