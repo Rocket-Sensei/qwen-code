@@ -78,21 +78,29 @@ export function useMessageQueue({
     );
   }, []);
 
-  // Flush queue: cancel ongoing request (if any) and immediately submit all queued messages
+  // Flush queue: cancel ongoing request then submit all queued messages.
+  // IMPORTANT: We cancel first so submitQuery won't return early.
   const flushQueue = useCallback(() => {
     if (messageQueue.length > 0) {
       const combinedMessage = messageQueue.join('\n\n');
-      setMessageQueue([]);
 
-      // Cancel the ongoing request if the model is currently responding,
-      // otherwise submitQuery will return early and the messages will be lost.
-      if (
-        streamingState === StreamingState.Responding ||
-        streamingState === StreamingState.WaitingForConfirmation
-      ) {
+      // When Responding: cancel the request so submitQuery won't return early.
+      // When WaitingForConfirmation: cancelOngoingRequest is a no-op, so
+      // submitQuery will also return early. In that case we DON'T clear the
+      // queue — let the confirmation resolve naturally and the auto-submit
+      // useEffect will handle it.
+      if (streamingState === StreamingState.Responding) {
         cancelOngoingRequest();
+        setMessageQueue([]);
+        submitQuery(combinedMessage);
+      } else if (streamingState === StreamingState.WaitingForConfirmation) {
+        // Don't clear queue — submitQuery would return early and lose messages.
+        // The auto-submit useEffect will fire when state transitions to Idle.
+      } else {
+        // Idle or other state — safe to submit directly.
+        setMessageQueue([]);
+        submitQuery(combinedMessage);
       }
-      submitQuery(combinedMessage);
     }
   }, [messageQueue, streamingState, submitQuery, cancelOngoingRequest]);
 
