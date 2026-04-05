@@ -75,6 +75,8 @@ export interface InputPromptProps {
   suggestionsWidth: number;
   shellModeActive: boolean;
   setShellModeActive: (value: boolean) => void;
+  flushQueue: () => void;
+  hasQueuedMessages: boolean;
   approvalMode: ApprovalMode;
   onEscapePromptChange?: (showPrompt: boolean) => void;
   onToggleShortcuts?: () => void;
@@ -108,6 +110,8 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
   suggestionsWidth,
   shellModeActive,
   setShellModeActive,
+  flushQueue,
+  hasQueuedMessages,
   approvalMode,
   onEscapePromptChange,
   onToggleShortcuts,
@@ -885,6 +889,11 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
       }
 
       if (keyMatchers[Command.SUBMIT](key)) {
+        // If there are queued messages, flush them immediately
+        if (hasQueuedMessages) {
+          flushQueue();
+        }
+
         // Accept and submit prompt suggestion on Enter when input is truly empty
         if (
           buffer.text.length === 0 &&
@@ -1008,6 +1017,8 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
       completion,
       shellModeActive,
       setShellModeActive,
+      flushQueue,
+      hasQueuedMessages,
       onClearScreen,
       inputHistory,
       handleSubmitAndClear,

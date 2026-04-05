@@ -232,4 +232,45 @@ describe('useMessageQueue', () => {
     expect(mockSubmitQuery).toHaveBeenCalledWith('Second batch');
     expect(mockSubmitQuery).toHaveBeenCalledTimes(2);
   });
+
+  it('should flush queue immediately and submit combined message', () => {
+    const { result } = renderHook(() =>
+      useMessageQueue({
+        isConfigInitialized: true,
+        streamingState: StreamingState.Responding,
+        submitQuery: mockSubmitQuery,
+      }),
+    );
+
+    act(() => {
+      result.current.addMessage('Message 1');
+      result.current.addMessage('Message 2');
+    });
+
+    expect(result.current.messageQueue).toEqual(['Message 1', 'Message 2']);
+
+    act(() => {
+      result.current.flushQueue();
+    });
+
+    expect(mockSubmitQuery).toHaveBeenCalledWith('Message 1\n\nMessage 2');
+    expect(result.current.messageQueue).toEqual([]);
+  });
+
+  it('should not submit when flushing empty queue', () => {
+    const { result } = renderHook(() =>
+      useMessageQueue({
+        isConfigInitialized: true,
+        streamingState: StreamingState.Responding,
+        submitQuery: mockSubmitQuery,
+      }),
+    );
+
+    act(() => {
+      result.current.flushQueue();
+    });
+
+    expect(mockSubmitQuery).not.toHaveBeenCalled();
+    expect(result.current.messageQueue).toEqual([]);
+  });
 });

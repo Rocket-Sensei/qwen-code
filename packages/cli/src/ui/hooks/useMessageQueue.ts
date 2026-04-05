@@ -17,6 +17,7 @@ export interface UseMessageQueueReturn {
   messageQueue: string[];
   addMessage: (message: string) => void;
   clearQueue: () => void;
+  flushQueue: () => void;
   getQueuedMessagesText: () => string;
 }
 
@@ -45,6 +46,15 @@ export function useMessageQueue({
     setMessageQueue([]);
   }, []);
 
+  // Flush queue: immediately submit all queued messages
+  const flushQueue = useCallback(() => {
+    if (messageQueue.length > 0) {
+      const combinedMessage = messageQueue.join('\n\n');
+      setMessageQueue([]);
+      submitQuery(combinedMessage);
+    }
+  }, [messageQueue, submitQuery]);
+
   // Get all queued messages as a single text string
   const getQueuedMessagesText = useCallback(() => {
     if (messageQueue.length === 0) return '';
@@ -70,6 +80,7 @@ export function useMessageQueue({
     messageQueue,
     addMessage,
     clearQueue,
+    flushQueue,
     getQueuedMessagesText,
   };
 }

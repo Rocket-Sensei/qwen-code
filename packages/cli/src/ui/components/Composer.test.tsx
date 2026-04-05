@@ -121,6 +121,7 @@ const createMockUIActions = (): UIActions =>
     handleRetryLastPrompt: vi.fn(),
     handleClearScreen: vi.fn(),
     setShellModeActive: vi.fn(),
+    flushQueue: vi.fn(),
     onEscapePromptChange: vi.fn(),
     vimHandleInput: vi.fn(),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

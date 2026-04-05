@@ -68,6 +68,7 @@ export interface UIActions {
   closeTrustDialog: () => void;
   closePermissionsDialog: () => void;
   setShellModeActive: (value: boolean) => void;
+  flushQueue: () => void;
   vimHandleInput: (key: Key) => boolean;
   handleIdePromptComplete: (result: IdeIntegrationNudgeResult) => void;
   handleCommandMigrationComplete: (result: CommandMigrationNudgeResult) => void;

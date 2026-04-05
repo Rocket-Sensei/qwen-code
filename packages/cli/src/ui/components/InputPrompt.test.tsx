@@ -201,6 +201,8 @@ describe('InputPrompt', () => {
       commandContext: mockCommandContext,
       shellModeActive: false,
       setShellModeActive: vi.fn(),
+      flushQueue: vi.fn(),
+      hasQueuedMessages: false,
       approvalMode: ApprovalMode.DEFAULT,
       inputWidth: 80,
       suggestionsWidth: 80,
