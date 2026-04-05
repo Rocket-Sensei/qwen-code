@@ -7,9 +7,11 @@
 import { Box, Text } from 'ink';
 import stringWidth from 'string-width';
 import { useTerminalSize } from '../hooks/useTerminalSize.js';
+import { theme } from '../semantic-colors.js';
 
 const MAX_DISPLAYED_QUEUED_MESSAGES = 3;
 const PADDING_LEFT = 2;
+const RIGHT_MARGIN = 2;
 
 /**
  * Truncate text to fit within a given visual width, accounting for emoji widths.
@@ -44,8 +46,6 @@ export interface QueuedMessageDisplayProps {
   messageQueue: string[];
 }
 
-const RIGHT_MARGIN = 2;
-
 export const QueuedMessageDisplay = ({
   messageQueue,
 }: QueuedMessageDisplayProps) => {
@@ -56,8 +56,18 @@ export const QueuedMessageDisplay = ({
     return null;
   }
 
+  // Truncate the "Queued" label to fit the header row
+  const queuedLabel = truncateToVisualWidth('Queued', availableWidth);
+
   return (
     <Box flexDirection="column" marginTop={1}>
+      {/* Header row: "Queued" label */}
+      <Box paddingLeft={PADDING_LEFT} overflow="hidden">
+        <Text color={theme.status.warningDim} bold>
+          {queuedLabel}
+        </Text>
+        <Text color={theme.text.secondary}> ({messageQueue.length})</Text>
+      </Box>
       {messageQueue
         .slice(0, MAX_DISPLAYED_QUEUED_MESSAGES)
         .map((message, index) => {
