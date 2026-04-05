@@ -18,6 +18,7 @@ import {
   SlashCommandStatus,
   ToolConfirmationOutcome,
   IdeClient,
+  persistPermissionOutcome,
 } from '@qwen-code/qwen-code-core';
 import { useSessionStats } from '../contexts/SessionContext.js';
 import type {
@@ -602,10 +603,42 @@ export const useSlashCommandProcessor = (
                     return { type: 'handled' };
                   }
 
-                  if (outcome === ToolConfirmationOutcome.ProceedAlways) {
+                  // Always add to session allowlist for "always" variants so
+                  // subsequent checks in this session skip the dialog
+                  const isAlways =
+                    outcome === ToolConfirmationOutcome.ProceedAlways ||
+                    outcome === ToolConfirmationOutcome.ProceedAlwaysProject ||
+                    outcome === ToolConfirmationOutcome.ProceedAlwaysUser;
+                  if (isAlways) {
                     setSessionShellAllowlist(
                       (prev) => new Set([...prev, ...approvedCommands]),
                     );
+
+                    // Persist to disk and update in-memory PermissionManager
+                    if (
+                      config &&
+                      (outcome ===
+                        ToolConfirmationOutcome.ProceedAlwaysProject ||
+                        outcome === ToolConfirmationOutcome.ProceedAlwaysUser)
+                    ) {
+                      const permissionRules = approvedCommands
+                        .map((cmd) => {
+                          const root = cmd.trim().split(/\s+/)[0];
+                          return root ? `Bash(${root} *)` : null;
+                        })
+                        .filter((r): r is string => r != null);
+
+                      if (permissionRules.length > 0) {
+                        await persistPermissionOutcome(
+                          outcome,
+                          {
+                            permissionRules,
+                          } as never,
+                          config.getOnPersistPermissionRule?.(),
+                          config.getPermissionManager?.(),
+                        );
+                      }
+                    }
                   }
 
                   return await handleSlashCommand(

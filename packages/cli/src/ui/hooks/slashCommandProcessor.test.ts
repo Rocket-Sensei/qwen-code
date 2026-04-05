@@ -742,6 +742,75 @@ describe('useSlashCommandProcessor', () => {
         );
       });
     });
+
+    it('should handle ProceedAlwaysProject: add to session allowlist and not re-prompt', async () => {
+      const result = setupProcessorHook([shellCommand]);
+      await waitFor(() => expect(result.current.slashCommands).toHaveLength(1));
+
+      // First invocation triggers confirmation
+      act(() => {
+        result.current.handleSlashCommand('/shellcmd');
+      });
+      await waitFor(() => {
+        expect(result.current.shellConfirmationRequest).not.toBeNull();
+      });
+
+      const onConfirm = result.current.shellConfirmationRequest?.onConfirm;
+      mockCommandAction.mockResolvedValue({
+        type: 'message',
+        messageType: 'info',
+        content: 'Success!',
+      });
+
+      await act(async () => {
+        onConfirm!(ToolConfirmationOutcome.ProceedAlwaysProject, ['rm -rf /']);
+      });
+
+      expect(result.current.shellConfirmationRequest).toBeNull();
+      await waitFor(() => {
+        expect(mockCommandAction).toHaveBeenCalledTimes(2);
+      });
+
+      // Verify the session allowlist was updated
+      const finalContext = result.current.commandContext;
+      expect(finalContext.session.sessionShellAllowlist.has('rm -rf /')).toBe(
+        true,
+      );
+    });
+
+    it('should handle ProceedAlwaysUser: add to session allowlist and not re-prompt', async () => {
+      const result = setupProcessorHook([shellCommand]);
+      await waitFor(() => expect(result.current.slashCommands).toHaveLength(1));
+
+      act(() => {
+        result.current.handleSlashCommand('/shellcmd');
+      });
+      await waitFor(() => {
+        expect(result.current.shellConfirmationRequest).not.toBeNull();
+      });
+
+      const onConfirm = result.current.shellConfirmationRequest?.onConfirm;
+      mockCommandAction.mockResolvedValue({
+        type: 'message',
+        messageType: 'info',
+        content: 'Success!',
+      });
+
+      await act(async () => {
+        onConfirm!(ToolConfirmationOutcome.ProceedAlwaysUser, ['rm -rf /']);
+      });
+
+      expect(result.current.shellConfirmationRequest).toBeNull();
+      await waitFor(() => {
+        expect(mockCommandAction).toHaveBeenCalledTimes(2);
+      });
+
+      // Verify the session allowlist was updated
+      const finalContext = result.current.commandContext;
+      expect(finalContext.session.sessionShellAllowlist.has('rm -rf /')).toBe(
+        true,
+      );
+    });
   });
 
   describe('Command Parsing and Matching', () => {
