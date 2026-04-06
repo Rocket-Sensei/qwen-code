@@ -267,7 +267,7 @@ describe('useMessageQueue', () => {
     expect(result.current.messageQueue).toEqual([]);
   });
 
-  it('should cancel ongoing request then submit when flushing while Responding', async () => {
+  it('should cancel ongoing request then submit when flushing while Responding', () => {
     const { result } = renderHook(() =>
       useMessageQueue(
         makeOptions({ streamingState: StreamingState.Responding }),
@@ -285,15 +285,8 @@ describe('useMessageQueue', () => {
 
     expect(mockCancelOngoingRequest).toHaveBeenCalledTimes(1);
     expect(mockCancelOngoingRequest).toHaveBeenCalledWith(true); // skipOnCancelSubmit
-    // Queue should be cleared immediately
-    expect(result.current.messageQueue).toEqual([]);
-
-    // submitQuery is deferred via setTimeout(0) to allow React state
-    // updates to propagate — advance fake timers to trigger it
-    await act(async () => {
-      vi.advanceTimersByTimeAsync(0);
-    });
     expect(mockSubmitQuery).toHaveBeenCalledWith('Message 1\n\nMessage 2');
+    expect(result.current.messageQueue).toEqual([]);
   });
 
   it('should NOT clear queue when flushing while WaitingForConfirmation (defers to auto-submit)', () => {
