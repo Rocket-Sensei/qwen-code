@@ -78,6 +78,8 @@ export interface UIActions {
   handleFolderTrustSelect: (choice: FolderTrustChoice) => void;
   setConstrainHeight: (value: boolean) => void;
   onEscapePromptChange: (show: boolean) => void;
+  /** Save the current input buffer to history (used before clearing on double ESC) */
+  onSaveInputToHistory?: () => void;
   onSuggestionsVisibilityChange: (visible: boolean) => void;
   refreshStatic: () => void;
   handleFinalSubmit: (value: string) => void;

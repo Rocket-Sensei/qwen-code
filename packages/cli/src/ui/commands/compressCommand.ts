@@ -17,6 +17,7 @@ export const compressCommand: SlashCommand = {
     return t('Compresses the context by replacing it with a summary.');
   },
   kind: CommandKind.BUILT_IN,
+  blocksInput: false,
   action: async (context) => {
     const { ui } = context;
     const executionMode = context.executionMode ?? 'interactive';
@@ -53,9 +54,9 @@ export const compressCommand: SlashCommand = {
       };
     }
 
-    const doCompress = async () => {
+    const doCompress = async (signal?: AbortSignal) => {
       const promptId = `compress-${Date.now()}`;
-      return await geminiClient.tryCompressChat(promptId, true);
+      return await geminiClient.tryCompressChat(promptId, true, signal);
     };
 
     if (executionMode === 'acp') {
@@ -95,6 +96,52 @@ export const compressCommand: SlashCommand = {
         ui.setPendingItem(pendingMessage);
       }
 
+      // For interactive mode, fire-and-forget so the user can keep typing.
+      // The async function handles all UI updates (result/error) and cleanup.
+      if (executionMode === 'interactive') {
+        const signal = abortSignal;
+        (async () => {
+          try {
+            const compressed = await doCompress(signal);
+            if (!compressed) {
+              ui.addItem(
+                {
+                  type: MessageType.ERROR,
+                  text: t('Failed to compress chat history.'),
+                },
+                Date.now(),
+              );
+              return;
+            }
+            ui.addItem(
+              {
+                type: MessageType.COMPRESSION,
+                compression: {
+                  isPending: false,
+                  originalTokenCount: compressed.originalTokenCount,
+                  newTokenCount: compressed.newTokenCount,
+                  compressionStatus: compressed.compressionStatus,
+                },
+              } as HistoryItemCompression,
+              Date.now(),
+            );
+          } catch (e) {
+            ui.addItem(
+              {
+                type: MessageType.ERROR,
+                text: t('Failed to compress chat history: {{error}}', {
+                  error: e instanceof Error ? e.message : String(e),
+                }),
+              },
+              Date.now(),
+            );
+          } finally {
+            ui.setPendingItem(null);
+          }
+        })();
+        return;
+      }
+
       const compressed = await doCompress();
 
       if (abortSignal?.aborted) {
@@ -102,38 +149,11 @@ export const compressCommand: SlashCommand = {
       }
 
       if (!compressed) {
-        if (executionMode === 'interactive') {
-          ui.addItem(
-            {
-              type: MessageType.ERROR,
-              text: t('Failed to compress chat history.'),
-            },
-            Date.now(),
-          );
-          return;
-        }
-
         return {
           type: 'message',
           messageType: 'error',
           content: t('Failed to compress chat history.'),
         };
-      }
-
-      if (executionMode === 'interactive') {
-        ui.addItem(
-          {
-            type: MessageType.COMPRESSION,
-            compression: {
-              isPending: false,
-              originalTokenCount: compressed.originalTokenCount,
-              newTokenCount: compressed.newTokenCount,
-              compressionStatus: compressed.compressionStatus,
-            },
-          } as HistoryItemCompression,
-          Date.now(),
-        );
-        return;
       }
 
       return {
@@ -147,15 +167,7 @@ export const compressCommand: SlashCommand = {
         return;
       }
       if (executionMode === 'interactive') {
-        ui.addItem(
-          {
-            type: MessageType.ERROR,
-            text: t('Failed to compress chat history: {{error}}', {
-              error: e instanceof Error ? e.message : String(e),
-            }),
-          },
-          Date.now(),
-        );
+        // Should not happen for fire-and-forget path, but handle defensively
         return;
       }
 
@@ -167,7 +179,9 @@ export const compressCommand: SlashCommand = {
         }),
       };
     } finally {
-      if (executionMode === 'interactive') {
+      // For interactive fire-and-forget, cleanup happens in the async closure.
+      // For non-interactive modes, clear pending item here.
+      if (executionMode !== 'interactive') {
         ui.setPendingItem(null);
       }
     }

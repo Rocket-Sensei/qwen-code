@@ -1319,6 +1319,21 @@ export const AppContainer = (props: AppContainerProps) => {
     setShowEscapePrompt(showPrompt);
   }, []);
 
+  // Save the current input buffer text to user message history so the user
+  // can recover it with the up arrow key (e.g., after double-ESC clears input).
+  const handleSaveInputToHistory = useCallback(() => {
+    const text = buffer.text.trim();
+    if (text) {
+      setUserMessages((prev) => {
+        // Avoid adding duplicate of the last message
+        if (prev.length > 0 && prev[prev.length - 1] === text) {
+          return prev;
+        }
+        return [...prev, text];
+      });
+    }
+  }, [buffer]);
+
   const handleIdePromptComplete = useCallback(
     (result: IdeIntegrationNudgeResult) => {
       if (result.userSelection === 'yes') {
@@ -1513,6 +1528,10 @@ export const AppContainer = (props: AppContainerProps) => {
 
       // 5. Clear input buffer (if has content)
       if (buffer.text.length > 0) {
+        const textToSave = buffer.text.trim();
+        if (textToSave) {
+          handleSaveInputToHistory();
+        }
         buffer.setText('');
         return; // Input cleared, end processing
       }
@@ -1532,6 +1551,7 @@ export const AppContainer = (props: AppContainerProps) => {
       streamingState,
       cancelOngoingRequest,
       buffer,
+      handleSaveInputToHistory,
     ],
   );
 
@@ -1586,7 +1606,11 @@ export const AppContainer = (props: AppContainerProps) => {
         // If input has content, use double-press to clear
         if (buffer.text.length > 0) {
           if (escapePressedOnce) {
-            // Second press: clear input, keep the flag to allow immediate cancel
+            // Second press: save to history then clear input
+            const textToSave = buffer.text.trim();
+            if (textToSave) {
+              handleSaveInputToHistory();
+            }
             buffer.setText('');
             return;
           }
@@ -1688,6 +1712,7 @@ export const AppContainer = (props: AppContainerProps) => {
       cancelOngoingRequest,
       buffer,
       handleSlashCommand,
+      handleSaveInputToHistory,
       activePtyId,
       embeddedShellFocused,
       btwItem,
@@ -2039,6 +2064,7 @@ export const AppContainer = (props: AppContainerProps) => {
       handleFolderTrustSelect,
       setConstrainHeight,
       onEscapePromptChange: handleEscapePromptChange,
+      onSaveInputToHistory: handleSaveInputToHistory,
       onSuggestionsVisibilityChange: setHasSuggestionsVisible,
       refreshStatic,
       handleFinalSubmit,
@@ -2100,6 +2126,7 @@ export const AppContainer = (props: AppContainerProps) => {
       handleFolderTrustSelect,
       setConstrainHeight,
       handleEscapePromptChange,
+      handleSaveInputToHistory,
       refreshStatic,
       handleFinalSubmit,
       retryLastPrompt,

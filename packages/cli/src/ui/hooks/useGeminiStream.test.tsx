@@ -903,6 +903,50 @@ describe('useGeminiStream', () => {
       expect(cancelSubmitSpy).toHaveBeenCalled();
     });
 
+    it('should NOT call onCancelSubmit when cancelOngoingRequest is called with skipOnCancelSubmit=true', async () => {
+      const cancelSubmitSpy = vi.fn();
+      const mockStream = (async function* () {
+        yield { type: 'content', value: 'Part 1' };
+        // Keep the stream open
+        await new Promise(() => {});
+      })();
+      mockSendMessageStream.mockReturnValue(mockStream);
+
+      const { result } = renderHook(() =>
+        useGeminiStream(
+          mockConfig.getGeminiClient(),
+          [],
+          mockAddItem,
+          mockConfig,
+          mockLoadedSettings,
+          mockOnDebugMessage,
+          mockHandleSlashCommand,
+          false,
+          () => 'vscode' as EditorType,
+          () => {},
+          () => Promise.resolve(),
+          false,
+          () => {},
+          () => {},
+          cancelSubmitSpy,
+          () => {},
+          80,
+          24,
+        ),
+      );
+
+      // Start a query
+      await act(async () => {
+        result.current.submitQuery('test query');
+      });
+
+      act(() => {
+        result.current.cancelOngoingRequest(true); // skipOnCancelSubmit=true
+      });
+
+      expect(cancelSubmitSpy).not.toHaveBeenCalled();
+    });
+
     it('should call setShellInputFocused(false) when cancelOngoingRequest is called', async () => {
       const setShellInputFocusedSpy = vi.fn();
       const mockStream = (async function* () {

@@ -107,6 +107,7 @@ export const Composer = () => {
           toggleQueueMode={uiActions.toggleQueueMode}
           approvalMode={showAutoAcceptIndicator}
           onEscapePromptChange={uiActions.onEscapePromptChange}
+          onSaveInputToHistory={uiActions.onSaveInputToHistory}
           onToggleShortcuts={handleToggleShortcuts}
           showShortcuts={showShortcuts}
           onSuggestionsVisibilityChange={handleSuggestionsVisibilityChange}
