@@ -21,6 +21,8 @@ export interface UseMessageQueueReturn {
   messageQueue: string[];
   addMessage: (message: string) => void;
   clearQueue: () => void;
+  /** Pop the last queued message out of the queue (for editing via left arrow) */
+  popLastQueuedMessage: () => string | null;
   flushQueue: () => void;
   getQueuedMessagesText: () => string;
   /**
@@ -56,6 +58,9 @@ export function useMessageQueue({
   const prevStreamingStateRef = useRef<StreamingState>(streamingState);
   const prevConfigInitializedRef = useRef(isConfigInitialized);
 
+  // Track the current queue via ref so we can pop from it synchronously
+  const queueRef = useRef<string[]>([]);
+
   // Add a message to the queue
   const addMessage = useCallback((message: string) => {
     const trimmedMessage = message.trim();
@@ -71,6 +76,17 @@ export function useMessageQueue({
     setMessageQueue([]);
   }, []);
 
+  // Pop the last queued message out of the queue for editing.
+  // Returns the message text or null if the queue is empty.
+  const popLastQueuedMessage = useCallback((): string | null => {
+    const current = queueRef.current;
+    if (current.length === 0) return null;
+    const last = current[current.length - 1];
+    queueRef.current = current.slice(0, -1);
+    setMessageQueue((prev) => prev.slice(0, -1));
+    return last;
+  }, []);
+
   // Toggle between all-at-once and one-by-one modes
   const toggleQueueMode = useCallback(() => {
     setQueueMode((prev) =>
@@ -82,8 +98,8 @@ export function useMessageQueue({
   // skipOnCancelSubmit=true prevents the cancel handler from copying text
   // back to the input buffer — we want a clean interrupt + direct submit.
   const flushQueue = useCallback(() => {
-    if (messageQueue.length > 0) {
-      const combinedMessage = messageQueue.join('\n\n');
+    if (queueRef.current.length > 0) {
+      const combinedMessage = queueRef.current.join('\n\n');
 
       // When Responding: cancel the request and set forceSubmitRef so
       // submitQuery will bypass the streamingState guard.
@@ -93,6 +109,7 @@ export function useMessageQueue({
       // useEffect will handle it.
       if (streamingState === StreamingState.Responding) {
         cancelOngoingRequest(true); // skipOnCancelSubmit: don't copy text to buffer
+        queueRef.current = [];
         setMessageQueue([]);
         submitQuery(combinedMessage);
       } else if (streamingState === StreamingState.WaitingForConfirmation) {
@@ -100,11 +117,12 @@ export function useMessageQueue({
         // The auto-submit useEffect will fire when state transitions to Idle.
       } else {
         // Idle or other state — safe to submit directly.
+        queueRef.current = [];
         setMessageQueue([]);
         submitQuery(combinedMessage);
       }
     }
-  }, [messageQueue, streamingState, submitQuery, cancelOngoingRequest]);
+  }, [streamingState, submitQuery, cancelOngoingRequest]);
 
   // Get all queued messages as a single text string
   const getQueuedMessagesText = useCallback(() => {
@@ -143,36 +161,40 @@ export function useMessageQueue({
       justConfigured &&
       streamingState === StreamingState.Idle &&
       !hasProcessedIdleRef.current &&
-      messageQueue.length > 0
+      queueRef.current.length > 0
     ) {
       hasProcessedIdleRef.current = true;
 
       if (queueMode === 'one-by-one') {
         // Submit only the first message, leave the rest queued
-        const [firstMessage, ...remaining] = messageQueue;
+        const [firstMessage, ...remaining] = queueRef.current;
+        queueRef.current = remaining;
         setMessageQueue(remaining);
         submitQuery(firstMessage);
       } else {
         // Combine all messages with double newlines
-        const combinedMessage = messageQueue.join('\n\n');
+        const combinedMessage = queueRef.current.join('\n\n');
+        queueRef.current = [];
         setMessageQueue([]);
         submitQuery(combinedMessage);
       }
     } else if (
       justBecameIdle &&
       !hasProcessedIdleRef.current &&
-      messageQueue.length > 0
+      queueRef.current.length > 0
     ) {
       hasProcessedIdleRef.current = true;
 
       if (queueMode === 'one-by-one') {
         // Submit only the first message, leave the rest queued
-        const [firstMessage, ...remaining] = messageQueue;
+        const [firstMessage, ...remaining] = queueRef.current;
+        queueRef.current = remaining;
         setMessageQueue(remaining);
         submitQuery(firstMessage);
       } else {
         // Combine all messages with double newlines
-        const combinedMessage = messageQueue.join('\n\n');
+        const combinedMessage = queueRef.current.join('\n\n');
+        queueRef.current = [];
         setMessageQueue([]);
         submitQuery(combinedMessage);
       }
@@ -189,6 +211,7 @@ export function useMessageQueue({
     messageQueue,
     addMessage,
     clearQueue,
+    popLastQueuedMessage,
     flushQueue,
     getQueuedMessagesText,
     drainQueue,

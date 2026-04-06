@@ -202,6 +202,7 @@ describe('InputPrompt', () => {
       shellModeActive: false,
       setShellModeActive: vi.fn(),
       flushQueue: vi.fn(),
+      popLastQueuedMessage: vi.fn(),
       hasQueuedMessages: false,
       queueMode: 'all-at-once',
       toggleQueueMode: vi.fn(),

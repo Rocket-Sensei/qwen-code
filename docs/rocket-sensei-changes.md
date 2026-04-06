@@ -118,6 +118,27 @@ A new `onSaveInputToHistory` callback was added to the `UIActions` context and w
 
 ---
 
+### 6. Feature: Left Arrow Hotkey to Edit Queued Message
+
+**Problem:** When a message is queued and the user wants to edit it before sending, they had to wait for the current task to complete or flush all messages.
+
+**Fix:** Added a `←` (left arrow) hotkey that, when the input buffer is empty and there are queued messages, pops the last queued message out of the queue and places it in the input buffer for editing. The message is immediately removed from the queue.
+
+Implementation uses a `queueRef` ref alongside the `messageQueue` state so that `popLastQueuedMessage` can read the current queue synchronously (without waiting for React state updates).
+
+#### Files Changed
+
+| File                                                | Changes                                                      |
+| --------------------------------------------------- | ------------------------------------------------------------ |
+| `packages/cli/src/ui/hooks/useMessageQueue.ts`      | Added `queueRef`, `popLastQueuedMessage()` — ref-based queue |
+| `packages/cli/src/ui/contexts/UIActionsContext.tsx` | Added `popLastQueuedMessage` to `UIActions` interface        |
+| `packages/cli/src/ui/AppContainer.tsx`              | Wired `popLastQueuedMessage` through context                 |
+| `packages/cli/src/ui/components/Composer.tsx`       | Passed `popLastQueuedMessage` to `InputPrompt`               |
+| `packages/cli/src/ui/components/InputPrompt.tsx`    | Added left arrow handler: pops queued message into buffer    |
+| `packages/cli/src/ui/hooks/useMessageQueue.test.ts` | Added tests for `popLastQueuedMessage`                       |
+
+---
+
 ## Commit History
 
 | Commit      | Message                                                                     |

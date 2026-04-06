@@ -122,6 +122,7 @@ const createMockUIActions = (): UIActions =>
     handleClearScreen: vi.fn(),
     setShellModeActive: vi.fn(),
     flushQueue: vi.fn(),
+    popLastQueuedMessage: vi.fn(),
     queueMode: 'all-at-once',
     toggleQueueMode: vi.fn(),
     onEscapePromptChange: vi.fn(),

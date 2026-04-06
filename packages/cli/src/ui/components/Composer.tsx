@@ -102,6 +102,7 @@ export const Composer = () => {
           shellModeActive={uiState.shellModeActive}
           setShellModeActive={uiActions.setShellModeActive}
           flushQueue={uiActions.flushQueue}
+          popLastQueuedMessage={uiActions.popLastQueuedMessage}
           hasQueuedMessages={uiState.messageQueue.length > 0}
           queueMode={uiActions.queueMode}
           toggleQueueMode={uiActions.toggleQueueMode}

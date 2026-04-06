@@ -77,6 +77,8 @@ export interface InputPromptProps {
   shellModeActive: boolean;
   setShellModeActive: (value: boolean) => void;
   flushQueue: () => void;
+  /** Pop the last queued message into the input buffer for editing */
+  popLastQueuedMessage?: () => string | null;
   hasQueuedMessages: boolean;
   queueMode?: QueueMode;
   toggleQueueMode?: () => void;
@@ -116,6 +118,7 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
   shellModeActive,
   setShellModeActive,
   flushQueue,
+  popLastQueuedMessage,
   hasQueuedMessages,
   queueMode: _queueMode,
   toggleQueueMode,
@@ -859,6 +862,25 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
         return true;
       }
 
+      // Left arrow on empty input with queued messages: pull the last queued
+      // message into the input buffer for editing.
+      if (
+        !shellModeActive &&
+        key.name === 'left' &&
+        buffer.text.length === 0 &&
+        hasQueuedMessages &&
+        !completion.showSuggestions &&
+        !reverseSearchActive &&
+        !followup.state.isVisible &&
+        popLastQueuedMessage
+      ) {
+        const popped = popLastQueuedMessage();
+        if (popped) {
+          buffer.setText(popped);
+          return true;
+        }
+      }
+
       if (!shellModeActive) {
         if (keyMatchers[Command.REVERSE_SEARCH](key)) {
           setCommandSearchActive(true);
@@ -1070,6 +1092,7 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
       hasAgents,
       setAgentTabBarFocused,
       followup,
+      popLastQueuedMessage,
       onPromptSuggestionDismiss,
     ],
   );
