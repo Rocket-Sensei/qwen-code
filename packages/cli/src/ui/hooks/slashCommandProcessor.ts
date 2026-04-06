@@ -388,7 +388,20 @@ export const useSlashCommandProcessor = (
         return addItem(item, timestamp);
       };
 
-      setIsProcessing(true);
+      // Parse the command first so we can check its blocksInput flag
+      const {
+        commandToExecute,
+        args,
+        canonicalPath: resolvedCommandPath,
+      } = parseSlashCommand(trimmed, commands);
+
+      // Only block input if the command doesn't explicitly opt out.
+      // Commands like /compress set blocksInput: false so the user can
+      // keep typing while the compression runs in the background.
+      const shouldBlockInput = commandToExecute?.blocksInput !== false;
+      if (shouldBlockInput) {
+        setIsProcessing(true);
+      }
 
       // Create a new AbortController for this command execution
       const abortController = new AbortController();
@@ -403,11 +416,6 @@ export const useSlashCommandProcessor = (
       }
 
       let hasError = false;
-      const {
-        commandToExecute,
-        args,
-        canonicalPath: resolvedCommandPath,
-      } = parseSlashCommand(trimmed, commands);
 
       const subcommand =
         resolvedCommandPath.length > 1
@@ -775,7 +783,9 @@ export const useSlashCommandProcessor = (
           });
           logSlashCommand(config, event);
         }
-        setIsProcessing(false);
+        if (shouldBlockInput) {
+          setIsProcessing(false);
+        }
       }
     },
     [

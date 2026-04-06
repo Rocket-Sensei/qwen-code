@@ -242,6 +242,13 @@ export interface SlashCommand {
   altNames?: string[];
   description: string;
   hidden?: boolean;
+  /**
+   * Whether this command blocks user input while executing.
+   * Defaults to `true`. Set to `false` for long-running background
+   * operations (e.g., /compress) that should allow the user to
+   * continue typing.
+   */
+  blocksInput?: boolean;
 
   kind: CommandKind;
 

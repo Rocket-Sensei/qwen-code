@@ -82,6 +82,8 @@ export interface InputPromptProps {
   toggleQueueMode?: () => void;
   approvalMode: ApprovalMode;
   onEscapePromptChange?: (showPrompt: boolean) => void;
+  /** Callback to save current input to history before clearing (e.g., on double ESC) */
+  onSaveInputToHistory?: () => void;
   onToggleShortcuts?: () => void;
   showShortcuts?: boolean;
   onSuggestionsVisibilityChange?: (visible: boolean) => void;
@@ -119,6 +121,7 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
   toggleQueueMode,
   approvalMode,
   onEscapePromptChange,
+  onSaveInputToHistory,
   onToggleShortcuts,
   showShortcuts,
   onSuggestionsVisibilityChange,
@@ -640,6 +643,11 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
             resetEscapeState();
           }, 500);
         } else {
+          // Save the current text to history before clearing so the user
+          // can recover it with the up arrow key.
+          if (buffer.text.trim() && onSaveInputToHistory) {
+            onSaveInputToHistory();
+          }
           // clear input and immediately reset state
           buffer.setText('');
           resetCompletionState();
@@ -1037,6 +1045,7 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
       escPressCount,
       showEscapePrompt,
       resetEscapeState,
+      onSaveInputToHistory,
       vimHandleInput,
       reverseSearchActive,
       textBeforeReverseSearch,

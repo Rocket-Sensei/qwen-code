@@ -64,6 +64,7 @@ describe('compressCommand', () => {
 
     await compressCommand.action!(context, '');
 
+    // Pending item is set synchronously before the fire-and-forget
     expect(context.ui.setPendingItem).toHaveBeenNthCalledWith(1, {
       type: MessageType.COMPRESSION,
       compression: {
@@ -74,10 +75,15 @@ describe('compressCommand', () => {
       },
     });
 
+    // tryCompressChat is called (fire-and-forget)
     expect(mockTryCompressChat).toHaveBeenCalledWith(
       expect.stringMatching(/^compress-\d+$/),
       true,
+      undefined, // abortSignal
     );
+
+    // Wait for the fire-and-forget async closure to complete
+    await new Promise((r) => setTimeout(r, 0));
 
     expect(context.ui.addItem).toHaveBeenCalledWith(
       {
@@ -100,6 +106,9 @@ describe('compressCommand', () => {
 
     await compressCommand.action!(context, '');
 
+    // Wait for the fire-and-forget async closure to complete
+    await new Promise((r) => setTimeout(r, 0));
+
     expect(context.ui.addItem).toHaveBeenCalledWith(
       expect.objectContaining({
         type: MessageType.ERROR,
@@ -116,6 +125,9 @@ describe('compressCommand', () => {
 
     await compressCommand.action!(context, '');
 
+    // Wait for the fire-and-forget async closure to complete
+    await new Promise((r) => setTimeout(r, 0));
+
     expect(context.ui.addItem).toHaveBeenCalledWith(
       expect.objectContaining({
         type: MessageType.ERROR,
@@ -129,6 +141,8 @@ describe('compressCommand', () => {
   it('should clear the pending item in a finally block', async () => {
     mockTryCompressChat.mockRejectedValue(new Error('some error'));
     await compressCommand.action!(context, '');
+    // Wait for the fire-and-forget async closure to complete
+    await new Promise((r) => setTimeout(r, 0));
     expect(context.ui.setPendingItem).toHaveBeenCalledWith(null);
   });
 });

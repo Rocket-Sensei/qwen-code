@@ -35,14 +35,20 @@ export function CompressionMessage({
     }
 
     switch (compressionStatus) {
-      case CompressionStatus.COMPRESSED:
-        return t(
-          'Chat history compressed from {{originalTokens}} to {{newTokens}} tokens.',
+      case CompressionStatus.COMPRESSED: {
+        const saved = originalTokens - newTokens;
+        const pct =
+          originalTokens > 0 ? Math.round((saved / originalTokens) * 100) : 0;
+        const summary = t(
+          'Chat context compressed: {{originalTokens}} → {{newTokens}} tokens ({{pct}}% smaller). Recent messages preserved; older conversation summarized.',
           {
             originalTokens: String(originalTokens),
             newTokens: String(newTokens),
+            pct: String(pct),
           },
         );
+        return summary;
+      }
       case CompressionStatus.COMPRESSION_FAILED_INFLATED_TOKEN_COUNT:
         // For smaller histories (< 50k tokens), compression overhead likely exceeds benefits
         if (originalTokens < 50000) {
@@ -56,6 +62,10 @@ export function CompressionMessage({
       case CompressionStatus.COMPRESSION_FAILED_TOKEN_COUNT_ERROR:
         return t(
           'Could not compress chat history due to a token counting error.',
+        );
+      case CompressionStatus.COMPRESSION_FAILED_EMPTY_SUMMARY:
+        return t(
+          'Could not compress chat history: the model returned an empty summary.',
         );
       case CompressionStatus.NOOP:
         return 'Nothing to compress.';

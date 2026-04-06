@@ -47,8 +47,9 @@ describe('<CompressionMessage />', () => {
 
       expect(output).toContain('✦');
       expect(output).toContain(
-        'Chat history compressed from 100 to 50 tokens.',
+        'Chat context compressed: 100 → 50 tokens (50% smaller)',
       );
+      expect(output).toContain('Recent messages preserved');
     });
 
     it('renders success message for large successful compressions', () => {
@@ -68,9 +69,9 @@ describe('<CompressionMessage />', () => {
         const output = lastFrame();
 
         expect(output).toContain('✦');
-        expect(output).toContain(
-          `compressed from ${original} to ${newTokens} tokens`,
-        );
+        expect(output).toContain('Chat context compressed:');
+        expect(output).toContain('(50% smaller)');
+        expect(output).toContain('Recent messages preserved');
         expect(output).not.toContain('Skipping compression');
         expect(output).not.toContain('did not reduce size');
       });
@@ -118,21 +119,21 @@ describe('<CompressionMessage />', () => {
         {
           original: 200,
           new: 80,
-          expected: 'compressed from 200 to 80 tokens',
+          expectedPct: '60% smaller',
         },
         {
           original: 500,
           new: 150,
-          expected: 'compressed from 500 to 150 tokens',
+          expectedPct: '70% smaller',
         },
         {
           original: 1500,
           new: 400,
-          expected: 'compressed from 1500 to 400 tokens',
+          expectedPct: '73% smaller',
         },
       ];
 
-      testCases.forEach(({ original, new: newTokens, expected }) => {
+      testCases.forEach(({ original, new: newTokens, expectedPct }) => {
         const props = createCompressionProps({
           isPending: false,
           originalTokenCount: original,
@@ -142,7 +143,9 @@ describe('<CompressionMessage />', () => {
         const { lastFrame } = render(<CompressionMessage {...props} />);
         const output = lastFrame();
 
-        expect(output).toContain(expected);
+        expect(output).toContain('Chat context compressed:');
+        expect(output).toContain(`${original} → ${newTokens} tokens`);
+        expect(output).toContain(expectedPct);
       });
     });
 

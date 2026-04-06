@@ -426,58 +426,63 @@ export const useGeminiStream = (
     }
   }, [streamingState, config, history]);
 
-  const cancelOngoingRequest = useCallback(() => {
-    if (streamingState !== StreamingState.Responding) {
-      return;
-    }
-    if (turnCancelledRef.current) {
-      return;
-    }
-    turnCancelledRef.current = true;
-    isSubmittingQueryRef.current = false;
-    abortControllerRef.current?.abort();
+  const cancelOngoingRequest = useCallback(
+    (skipOnCancelSubmit = false) => {
+      if (streamingState !== StreamingState.Responding) {
+        return;
+      }
+      if (turnCancelledRef.current) {
+        return;
+      }
+      turnCancelledRef.current = true;
+      isSubmittingQueryRef.current = false;
+      abortControllerRef.current?.abort();
 
-    // Report cancellation to arena status reporter (if in arena mode).
-    // This is needed because cancellation during tool execution won't
-    // flow through sendMessageStream where the inline reportCancelled()
-    // lives — tools get cancelled and handleCompletedTools returns early.
-    config.getArenaAgentClient()?.reportCancelled();
+      // Report cancellation to arena status reporter (if in arena mode).
+      // This is needed because cancellation during tool execution won't
+      // flow through sendMessageStream where the inline reportCancelled()
+      // lives — tools get cancelled and handleCompletedTools returns early.
+      config.getArenaAgentClient()?.reportCancelled();
 
-    // Log API cancellation
-    const prompt_id = config.getSessionId() + '########' + getPromptCount();
-    const cancellationEvent = new ApiCancelEvent(
-      config.getModel(),
-      prompt_id,
-      config.getContentGeneratorConfig()?.authType,
-    );
-    logApiCancel(config, cancellationEvent);
+      // Log API cancellation
+      const prompt_id = config.getSessionId() + '########' + getPromptCount();
+      const cancellationEvent = new ApiCancelEvent(
+        config.getModel(),
+        prompt_id,
+        config.getContentGeneratorConfig()?.authType,
+      );
+      logApiCancel(config, cancellationEvent);
 
-    if (pendingHistoryItemRef.current) {
-      addItem(pendingHistoryItemRef.current, Date.now());
-    }
-    addItem(
-      {
-        type: MessageType.INFO,
-        text: 'Request cancelled.',
-      },
-      Date.now(),
-    );
-    setPendingHistoryItem(null);
-    clearRetryCountdown();
-    onCancelSubmit();
-    setIsResponding(false);
-    setShellInputFocused(false);
-  }, [
-    streamingState,
-    addItem,
-    setPendingHistoryItem,
-    onCancelSubmit,
-    pendingHistoryItemRef,
-    setShellInputFocused,
-    clearRetryCountdown,
-    config,
-    getPromptCount,
-  ]);
+      if (pendingHistoryItemRef.current) {
+        addItem(pendingHistoryItemRef.current, Date.now());
+      }
+      addItem(
+        {
+          type: MessageType.INFO,
+          text: 'Request cancelled.',
+        },
+        Date.now(),
+      );
+      setPendingHistoryItem(null);
+      clearRetryCountdown();
+      if (!skipOnCancelSubmit) {
+        onCancelSubmit();
+      }
+      setIsResponding(false);
+      setShellInputFocused(false);
+    },
+    [
+      streamingState,
+      addItem,
+      setPendingHistoryItem,
+      onCancelSubmit,
+      pendingHistoryItemRef,
+      setShellInputFocused,
+      clearRetryCountdown,
+      config,
+      getPromptCount,
+    ],
+  );
 
   const prepareQueryForGemini = useCallback(
     async (
@@ -896,14 +901,20 @@ export const useGeminiStream = (
         addItem(pendingHistoryItemRef.current, userMessageTimestamp);
         setPendingHistoryItem(null);
       }
+      const orig = eventValue?.originalTokenCount;
+      const newer = eventValue?.newTokenCount;
+      const pct =
+        orig != null && newer != null && orig > 0
+          ? Math.round(((orig - newer) / orig) * 100)
+          : null;
+      const pctStr = pct != null ? ` (${pct}% smaller)` : '';
       return addItem(
         {
           type: 'info',
           text:
-            `IMPORTANT: This conversation approached the input token limit for ${config.getModel()}. ` +
-            `A compressed context will be sent for future messages (compressed from: ` +
-            `${eventValue?.originalTokenCount ?? 'unknown'} to ` +
-            `${eventValue?.newTokenCount ?? 'unknown'} tokens).`,
+            `This conversation approached the input token limit for ${config.getModel()}. ` +
+            `Context compressed from ${orig ?? 'unknown'} to ${newer ?? 'unknown'} tokens${pctStr}. ` +
+            `Recent messages are preserved; older conversation has been summarized.`,
         },
         Date.now(),
       );
