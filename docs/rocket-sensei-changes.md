@@ -154,9 +154,9 @@ Implementation uses a `queueRef` ref alongside the `messageQueue` state so that 
 
 ## Test Results
 
-- **CLI UI tests:** 2,145 passed, 4 skipped (150 test files)
+- **CLI UI tests:** 2,148 passed, 4 skipped (150 test files)
 - **Core tests:** 5,283 passed, 2 skipped (206 test files)
-- **Total:** 7,428 passed, 6 skipped (356 test files)
+- **Total:** 7,431 passed, 6 skipped (356 test files)
 - **TypeScript:** Clean (no errors)
 - **Lint:** Clean
 
@@ -170,6 +170,7 @@ Implementation uses a `queueRef` ref alongside the `messageQueue` state so that 
 | `Enter`   | Empty buffer + has queued messages + model responding | Cancel current response + flush all queued messages         |
 | `Enter`   | Empty buffer + has queued messages + model idle       | Flush all queued messages                                   |
 | `↑` / `↓` | Input focused                                         | Navigate input history (including text saved by double ESC) |
+| `←`       | Empty buffer + has queued messages                    | Pop last queued message into input buffer for editing       |
 
 ---
 
