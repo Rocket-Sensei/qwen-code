@@ -79,21 +79,22 @@ export function useMessageQueue({
   }, []);
 
   // Flush queue: cancel ongoing request then submit all queued messages.
-  // IMPORTANT: We cancel first so submitQuery won't return early.
   // skipOnCancelSubmit=true prevents the cancel handler from copying text
   // back to the input buffer — we want a clean interrupt + direct submit.
   const flushQueue = useCallback(() => {
     if (messageQueue.length > 0) {
       const combinedMessage = messageQueue.join('\n\n');
 
-      // When Responding: cancel the request so submitQuery won't return early.
-      // We MUST defer submitQuery to the next tick because cancelOngoingRequest
-      // calls setIsResponding(false) which is async — without deferring,
-      // streamingState is still Responding and submitQuery returns immediately.
+      // When Responding: cancel the request and set forceSubmitRef so
+      // submitQuery will bypass the streamingState guard.
+      // When WaitingForConfirmation: cancelOngoingRequest is a no-op, so
+      // submitQuery will also return early. In that case we DON'T clear the
+      // queue — let the confirmation resolve naturally and the auto-submit
+      // useEffect will handle it.
       if (streamingState === StreamingState.Responding) {
         cancelOngoingRequest(true); // skipOnCancelSubmit: don't copy text to buffer
         setMessageQueue([]);
-        setTimeout(() => submitQuery(combinedMessage), 0);
+        submitQuery(combinedMessage);
       } else if (streamingState === StreamingState.WaitingForConfirmation) {
         // Don't clear queue — submitQuery would return early and lose messages.
         // The auto-submit useEffect will fire when state transitions to Idle.

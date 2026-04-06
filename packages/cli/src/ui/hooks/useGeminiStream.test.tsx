@@ -947,6 +947,62 @@ describe('useGeminiStream', () => {
       expect(cancelSubmitSpy).not.toHaveBeenCalled();
     });
 
+    it('should allow submitQuery to proceed after cancelOngoingRequest with skipOnCancelSubmit=true', async () => {
+      const cancelSubmitSpy = vi.fn();
+      const mockStream = (async function* () {
+        yield { type: 'content', value: 'Part 1' };
+        await new Promise(() => {}); // Keep stream open
+      })();
+      mockSendMessageStream.mockReturnValue(mockStream);
+
+      const { result } = renderHook(() =>
+        useGeminiStream(
+          mockConfig.getGeminiClient(),
+          [],
+          mockAddItem,
+          mockConfig,
+          mockLoadedSettings,
+          mockOnDebugMessage,
+          mockHandleSlashCommand,
+          false,
+          () => 'vscode' as EditorType,
+          () => {},
+          () => Promise.resolve(),
+          false,
+          () => {},
+          () => {},
+          cancelSubmitSpy,
+          () => {},
+          80,
+          24,
+        ),
+      );
+
+      // Start a query — puts state in Responding
+      await act(async () => {
+        result.current.submitQuery('first query');
+      });
+
+      expect(result.current.streamingState).toBe(StreamingState.Responding);
+
+      // Cancel with skipOnCancelSubmit and immediately submit another query
+      // This simulates the flushQueue flow: cancel + submit in the same tick.
+      act(() => {
+        result.current.cancelOngoingRequest(true); // skipOnCancelSubmit=true
+      });
+
+      // The streamingState may still be Responding (React hasn't re-rendered),
+      // but submitQuery should proceed because forceSubmitRef was set.
+      mockSendMessageStream.mockClear();
+
+      await act(async () => {
+        result.current.submitQuery('force submitted message');
+      });
+
+      // submitQuery should have been called and a new stream started
+      expect(mockSendMessageStream).toHaveBeenCalledTimes(1);
+    });
+
     it('should call setShellInputFocused(false) when cancelOngoingRequest is called', async () => {
       const setShellInputFocusedSpy = vi.fn();
       const mockStream = (async function* () {

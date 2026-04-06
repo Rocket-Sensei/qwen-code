@@ -179,6 +179,7 @@ export const useGeminiStream = (
   const abortControllerRef = useRef<AbortController | null>(null);
   const turnCancelledRef = useRef(false);
   const isSubmittingQueryRef = useRef(false);
+  const forceSubmitRef = useRef(false);
   const lastPromptRef = useRef<PartListUnion | null>(null);
   const lastPromptErroredRef = useRef(false);
   const [isResponding, setIsResponding] = useState<boolean>(false);
@@ -437,6 +438,13 @@ export const useGeminiStream = (
       turnCancelledRef.current = true;
       isSubmittingQueryRef.current = false;
       abortControllerRef.current?.abort();
+
+      // When force-submit a queued message is intended (e.g., double-Enter
+      // during generation), set a flag so the next submitQuery call will
+      // bypass the streamingState guard.
+      if (skipOnCancelSubmit) {
+        forceSubmitRef.current = true;
+      }
 
       // Report cancellation to arena status reporter (if in arena mode).
       // This is needed because cancellation during tool execution won't
@@ -1193,11 +1201,19 @@ export const useGeminiStream = (
         return;
       }
 
+      // Bypass streamingState guard when a force-submit was requested
+      // (e.g., double-Enter during generation to interrupt and send queued msg).
+      const isForceSubmit = forceSubmitRef.current;
+      if (isForceSubmit) {
+        forceSubmitRef.current = false;
+      }
+
       if (
         (streamingState === StreamingState.Responding ||
           streamingState === StreamingState.WaitingForConfirmation) &&
         submitType !== SendMessageType.ToolResult &&
-        !allowConcurrentBtwDuringResponse
+        !allowConcurrentBtwDuringResponse &&
+        !isForceSubmit
       )
         return;
 
