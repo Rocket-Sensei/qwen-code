@@ -81,7 +81,7 @@ export const QueuedMessageDisplay = ({
       borderTop={true}
       borderBottom={true}
       borderLeft={true}
-      borderRight={false}
+      borderRight={true}
       borderColor={theme.status.warningDim}
     >
       {/* Header row: "Queued" label + count + mode badge + description */}
