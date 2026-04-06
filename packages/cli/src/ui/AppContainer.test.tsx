@@ -242,6 +242,7 @@ describe('AppContainer State Management', () => {
       messageQueue: [],
       addMessage: vi.fn(),
       clearQueue: vi.fn(),
+      popLastQueuedMessage: vi.fn(),
       flushQueue: vi.fn(),
       getQueuedMessagesText: vi.fn().mockReturnValue(''),
       queueMode: 'all-at-once',

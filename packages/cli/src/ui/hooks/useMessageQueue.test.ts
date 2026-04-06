@@ -289,6 +289,40 @@ describe('useMessageQueue', () => {
     expect(result.current.messageQueue).toEqual([]);
   });
 
+  it('should pop the last queued message from the queue', async () => {
+    const { result } = renderHook(() => useMessageQueue(makeOptions()));
+
+    act(() => {
+      result.current.addMessage('Message 1');
+      result.current.addMessage('Message 2');
+      result.current.addMessage('Message 3');
+    });
+
+    expect(result.current.messageQueue).toEqual([
+      'Message 1',
+      'Message 2',
+      'Message 3',
+    ]);
+
+    const popped = result.current.popLastQueuedMessage();
+    expect(popped).toBe('Message 3');
+
+    // State update is async — advance fake timers to flush the update
+    await act(async () => {
+      vi.advanceTimersByTimeAsync(0);
+    });
+    expect(result.current.messageQueue).toEqual(['Message 1', 'Message 2']);
+  });
+
+  it('should return null when popping from empty queue', () => {
+    const { result } = renderHook(() => useMessageQueue(makeOptions()));
+
+    const popped = result.current.popLastQueuedMessage();
+
+    expect(popped).toBeNull();
+    expect(result.current.messageQueue).toEqual([]);
+  });
+
   it('should NOT clear queue when flushing while WaitingForConfirmation (defers to auto-submit)', () => {
     const { result } = renderHook(() =>
       useMessageQueue(

@@ -70,6 +70,8 @@ export interface UIActions {
   closePermissionsDialog: () => void;
   setShellModeActive: (value: boolean) => void;
   flushQueue: () => void;
+  /** Pop the last queued message out of the queue for editing (left arrow hotkey) */
+  popLastQueuedMessage: () => string | null;
   queueMode: QueueMode;
   toggleQueueMode: () => void;
   vimHandleInput: (key: Key) => boolean;
