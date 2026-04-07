@@ -97,6 +97,8 @@ export const Composer = () => {
           commandContext={uiState.commandContext}
           shellModeActive={uiState.shellModeActive}
           setShellModeActive={uiActions.setShellModeActive}
+          flushQueue={uiActions.flushQueue}
+          hasQueuedMessages={uiState.messageQueue.length > 0}
           approvalMode={showAutoAcceptIndicator}
           onEscapePromptChange={uiActions.onEscapePromptChange}
           onToggleShortcuts={handleToggleShortcuts}

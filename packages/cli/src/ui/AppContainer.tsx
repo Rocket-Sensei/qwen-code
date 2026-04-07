@@ -777,12 +777,17 @@ export const AppContainer = (props: AppContainerProps) => {
     disabled: agentViewState.activeView !== 'main',
   });
 
-  const { messageQueue, addMessage, clearQueue, getQueuedMessagesText } =
-    useMessageQueue({
-      isConfigInitialized,
-      streamingState,
-      submitQuery,
-    });
+  const {
+    messageQueue,
+    addMessage,
+    clearQueue,
+    flushQueue,
+    getQueuedMessagesText,
+  } = useMessageQueue({
+    isConfigInitialized,
+    streamingState,
+    submitQuery,
+  });
 
   // Bridge message queue to mid-turn drain via ref.
   // Sync ref on every render so the drain callback always reads latest state.
@@ -2064,6 +2069,7 @@ export const AppContainer = (props: AppContainerProps) => {
       closeTrustDialog,
       closePermissionsDialog,
       setShellModeActive,
+      flushQueue,
       vimHandleInput,
       handleIdePromptComplete,
       handleCommandMigrationComplete,
@@ -2122,6 +2128,7 @@ export const AppContainer = (props: AppContainerProps) => {
       closeTrustDialog,
       closePermissionsDialog,
       setShellModeActive,
+      flushQueue,
       vimHandleInput,
       handleIdePromptComplete,
       handleCommandMigrationComplete,
