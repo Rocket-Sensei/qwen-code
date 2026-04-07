@@ -511,6 +511,13 @@ function clamp(v: number, min: number, max: number): number {
 
 /* ────────────────────────────────────────────────────────────────────────── */
 
+/**
+ * Maximum input size for paste operations.
+ * ~500K characters ≈ 125K tokens, leaving headroom for system prompt + context
+ * in a 200K token model. Hard limit to prevent hangs/crashes.
+ */
+const MAX_INPUT_SIZE = 500_000;
+
 interface UseTextBufferProps {
   initialText?: string;
   initialCursorOffset?: number;
@@ -520,6 +527,8 @@ interface UseTextBufferProps {
   onChange?: (text: string) => void; // Callback for when text changes
   isValidPath: (path: string) => boolean;
   shellModeActive?: boolean; // Whether the text buffer is in shell mode
+  /** Called when a paste exceeds MAX_INPUT_SIZE. */
+  onPasteTooLarge?: (size: number, max: number) => void;
 }
 
 interface UndoHistoryEntry {
@@ -1527,6 +1536,7 @@ export function useTextBuffer({
   onChange,
   isValidPath,
   shellModeActive = false,
+  onPasteTooLarge,
 }: UseTextBufferProps): TextBuffer {
   const initialState = useMemo((): TextBufferState => {
     const lines = initialText.split('\n');
@@ -1616,6 +1626,12 @@ export function useTextBuffer({
         return;
       }
 
+      // Guard against oversized paste operations
+      if (paste && ch.length > MAX_INPUT_SIZE) {
+        onPasteTooLarge?.(ch.length, MAX_INPUT_SIZE);
+        return;
+      }
+
       const minLengthToInferAsDragDrop = 3;
       if (
         ch.length >= minLengthToInferAsDragDrop &&
@@ -1650,7 +1666,7 @@ export function useTextBuffer({
         dispatch({ type: 'insert', payload: currentText });
       }
     },
-    [isValidPath, shellModeActive],
+    [isValidPath, shellModeActive, onPasteTooLarge],
   );
 
   const newline = useCallback((): void => {

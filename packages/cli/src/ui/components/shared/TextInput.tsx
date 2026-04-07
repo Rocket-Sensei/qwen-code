@@ -33,6 +33,8 @@ export interface TextInputProps {
   validationErrors?: string[];
   inputWidth?: number;
   initialCursorOffset?: number;
+  /** Called when a paste exceeds the maximum input size. */
+  onPasteTooLarge?: (size: number, max: number) => void;
 }
 
 export function TextInput({
@@ -48,6 +50,7 @@ export function TextInput({
   validationErrors = [],
   inputWidth = 80,
   initialCursorOffset,
+  onPasteTooLarge,
 }: TextInputProps) {
   const allowMultiline = height > 1;
 
@@ -66,6 +69,7 @@ export function TextInput({
     viewport: { height, width: inputWidth },
     isValidPath: () => false,
     onChange: stableOnChange,
+    onPasteTooLarge,
   });
 
   const handleSubmit = () => {

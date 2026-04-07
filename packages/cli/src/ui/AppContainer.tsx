@@ -396,6 +396,12 @@ export const AppContainer = (props: AppContainerProps) => {
     }
   }, []);
 
+  // Oversized paste rejection state
+  const [pasteTooLarge, setPasteTooLarge] = useState<{
+    size: number;
+    max: number;
+  } | null>(null);
+
   const buffer = useTextBuffer({
     initialText: '',
     viewport: { height: 10, width: inputWidth },
@@ -403,6 +409,11 @@ export const AppContainer = (props: AppContainerProps) => {
     setRawMode,
     isValidPath,
     shellModeActive,
+    onPasteTooLarge: (size, max) => {
+      setPasteTooLarge({ size, max });
+      // Clear the error after 5 seconds
+      setTimeout(() => setPasteTooLarge(null), 5000);
+    },
   });
 
   useEffect(() => {
@@ -1922,6 +1933,8 @@ export const AppContainer = (props: AppContainerProps) => {
       // Prompt suggestion
       promptSuggestion,
       dismissPromptSuggestion,
+      // Oversized paste rejection
+      pasteTooLarge,
     }),
     [
       isThemeDialogOpen,
@@ -2029,6 +2042,8 @@ export const AppContainer = (props: AppContainerProps) => {
       // Prompt suggestion
       promptSuggestion,
       dismissPromptSuggestion,
+      // Oversized paste rejection
+      pasteTooLarge,
     ],
   );
 
