@@ -547,18 +547,19 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
         }
       }
 
-      if (
-        key.sequence === '!' &&
-        buffer.text === '' &&
-        !completion.showSuggestions
-      ) {
-        // Hide shortcuts when toggling shell mode
-        if (showShortcuts && onToggleShortcuts) {
-          onToggleShortcuts();
+      if (key.sequence === '!' && !completion.showSuggestions) {
+        // Enter/exit shell mode when buffer is empty or cursor is at the beginning
+        const [cursorRow, cursorCol] = buffer.cursor;
+        const isAtStart =
+          buffer.text === '' || (cursorRow === 0 && cursorCol === 0);
+        if (isAtStart) {
+          // Hide shortcuts when toggling shell mode
+          if (showShortcuts && onToggleShortcuts) {
+            onToggleShortcuts();
+          }
+          setShellModeActive(!shellModeActive);
+          return true;
         }
-        setShellModeActive(!shellModeActive);
-        buffer.setText(''); // Clear the '!' from input
-        return true;
       }
 
       // Toggle keyboard shortcuts display with "?" when buffer is empty
@@ -1023,6 +1024,18 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
           }
         }
         // No placeholder matched — fall through to BaseTextInput's default backspace
+      }
+
+      // Backspace at start of input in shell mode — exit shell mode
+      if (
+        shellModeActive &&
+        buffer.text.length === 0 &&
+        (key.name === 'backspace' ||
+          key.sequence === '\x7f' ||
+          (key.ctrl && key.name === 'h'))
+      ) {
+        setShellModeActive(false);
+        return true;
       }
 
       // Ctrl+C with completion active — also reset completion state
