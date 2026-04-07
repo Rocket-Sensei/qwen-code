@@ -139,16 +139,40 @@ Implementation uses a `queueRef` ref alongside the `messageQueue` state so that 
 
 ---
 
+### 7. Feature: Oversized Paste Protection and Queue UI Hints
+
+**Problem:** Pasting very large text (500K+ chars) could hang the CLI. Also, queue UI hints needed updating.
+
+**Fix:** Added `MAX_INPUT_SIZE` (500K chars) limit to prevent hangs from massive pastes. Show error banner when paste exceeds limit (~125K tokens headroom). Error auto-clears after 5 seconds. Updated queued message hints: `ctrl+q to toggle, < to edit last`.
+
+#### Files Changed
+
+| File                                                      | Changes                                      |
+| --------------------------------------------------------- | -------------------------------------------- |
+| `packages/cli/src/ui/AppContainer.tsx`                    | Added oversized paste handler                |
+| `packages/cli/src/ui/components/InputPrompt.tsx`          | Added paste size validation + error banner   |
+| `packages/cli/src/ui/components/QueuedMessageDisplay.tsx` | Updated toggle/edit hints                    |
+| `packages/cli/src/ui/components/shared/TextInput.tsx`     | Added max length constraint                  |
+| `packages/cli/src/ui/components/shared/text-buffer.ts`    | Added `MAX_INPUT_SIZE` constant + validation |
+| `packages/cli/src/ui/contexts/UIStateContext.tsx`         | Added paste error state                      |
+
+---
+
 ## Commit History
 
-| Commit      | Message                                                                     |
-| ----------- | --------------------------------------------------------------------------- |
-| `8eb7a95dd` | fix: use forceSubmitRef to reliably submit queued message after interrupt   |
-| `db238145e` | fix: improve compression UX and prevent input loss on double ESC            |
-| `2bda65f40` | fix: prevent message loss when flushing queue during WaitingForConfirmation |
-| `de3fc97f7` | fix: auto-submit queue when config initializes while already idle           |
-| `b782973a6` | fix: remove hearing-based pun and add mystic/dark loading phrases           |
-| `fe625ba3c` | feat: add queue mode toggle (all-at-once vs one-by-one)                     |
+| Commit     | Message                                                                     |
+| ---------- | --------------------------------------------------------------------------- |
+| `30e344bb` | feat: add oversized paste protection and improve queue UI hints             |
+| `e9514ddd` | feat: add left arrow hotkey to edit queued message                          |
+| `92d92295` | fix: show right border on queued message display                            |
+| `87cc203c` | fix: use forceSubmitRef to reliably submit queued message after interrupt   |
+| `9f45c155` | fix: improve compression UX and prevent input loss on double ESC            |
+| `4fca58c6` | fix: prevent message loss when flushing queue during WaitingForConfirmation |
+| `ca74e15f` | fix: auto-submit queue when config initializes while already idle           |
+| `2c4cae18` | fix: remove hearing-based pun and add mystic/dark loading phrases           |
+| `cd874df0` | feat: add queue mode toggle (all-at-once vs one-by-one)                     |
+| `e433c37d` | fix: persist 'always allow' shell permissions for slash commands            |
+| `2d55f8c3` | feat: add queued message display and flush on Enter (squashed 4 commits)    |
 
 ---
 
@@ -170,6 +194,7 @@ Implementation uses a `queueRef` ref alongside the `messageQueue` state so that 
 | `Enter`   | Empty buffer + has queued messages + model responding | Cancel current response + flush all queued messages         |
 | `Enter`   | Empty buffer + has queued messages + model idle       | Flush all queued messages                                   |
 | `↑` / `↓` | Input focused                                         | Navigate input history (including text saved by double ESC) |
+| `←`       | Empty buffer + has queued messages                    | Pop last queued message into input buffer for editing       |
 
 ---
 
