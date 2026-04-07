@@ -1027,9 +1027,13 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
       }
 
       // Backspace at start of input in shell mode — exit shell mode
+      // (keeps text intact when exiting with non-empty buffer)
+      const [cursorRow, cursorCol] = buffer.cursor;
+      const isAtStart =
+        buffer.text.length === 0 || (cursorRow === 0 && cursorCol === 0);
       if (
         shellModeActive &&
-        buffer.text.length === 0 &&
+        isAtStart &&
         (key.name === 'backspace' ||
           key.sequence === '\x7f' ||
           (key.ctrl && key.name === 'h'))

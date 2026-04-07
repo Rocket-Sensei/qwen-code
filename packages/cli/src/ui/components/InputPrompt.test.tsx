@@ -1784,6 +1784,74 @@ describe('InputPrompt', () => {
       unmount();
     });
 
+    it('should disable shell mode when backspace is pressed at empty input', async () => {
+      props.shellModeActive = true;
+      props.buffer.setText('');
+
+      const { stdin, unmount } = renderWithProviders(
+        <InputPrompt {...props} />,
+      );
+      await wait();
+
+      stdin.write('\x7f'); // backspace (DEL)
+      await wait();
+
+      expect(props.setShellModeActive).toHaveBeenCalledWith(false);
+      unmount();
+    });
+
+    it('should disable shell mode when Ctrl+H (backspace equivalent) is pressed at empty input', async () => {
+      props.shellModeActive = true;
+      props.buffer.setText('');
+
+      const { stdin, unmount } = renderWithProviders(
+        <InputPrompt {...props} />,
+      );
+      await wait();
+
+      stdin.write('\x08'); // Ctrl+H
+      await wait();
+
+      expect(props.setShellModeActive).toHaveBeenCalledWith(false);
+      unmount();
+    });
+
+    it('should disable shell mode when backspace is pressed at start of non-empty input (keeps text)', async () => {
+      props.shellModeActive = true;
+      props.buffer.setText('ls -la');
+      vi.spyOn(props.buffer, 'cursor', 'get').mockReturnValue([0, 0]);
+
+      const { stdin, unmount } = renderWithProviders(
+        <InputPrompt {...props} />,
+      );
+      await wait();
+
+      stdin.write('\x7f'); // backspace (DEL)
+      await wait();
+
+      expect(props.setShellModeActive).toHaveBeenCalledWith(false);
+      expect(props.buffer.backspace).not.toHaveBeenCalled();
+      unmount();
+    });
+
+    it('should perform normal backspace when not at start of input in shell mode', async () => {
+      props.shellModeActive = true;
+      props.buffer.setText('ls -la');
+      vi.spyOn(props.buffer, 'cursor', 'get').mockReturnValue([0, 3]);
+
+      const { stdin, unmount } = renderWithProviders(
+        <InputPrompt {...props} />,
+      );
+      await wait();
+
+      stdin.write('\x7f'); // backspace (DEL)
+      await wait();
+
+      expect(props.setShellModeActive).not.toHaveBeenCalled();
+      expect(props.buffer.backspace).toHaveBeenCalled();
+      unmount();
+    });
+
     it('should handle ESC when completion suggestions are showing', async () => {
       mockedUseCommandCompletion.mockReturnValue({
         ...mockCommandCompletion,
