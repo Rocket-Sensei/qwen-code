@@ -58,9 +58,6 @@ export function useMessageQueue({
   const prevStreamingStateRef = useRef<StreamingState>(streamingState);
   const prevConfigInitializedRef = useRef(isConfigInitialized);
 
-  // Track the current queue via ref so we can pop from it synchronously
-  const queueRef = useRef<string[]>([]);
-
   // Add a message to the queue
   const addMessage = useCallback((message: string) => {
     const trimmedMessage = message.trim();
