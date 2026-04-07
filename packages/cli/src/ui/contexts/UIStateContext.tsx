@@ -147,6 +147,8 @@ export interface UIState {
   promptSuggestion: string | null;
   /** Dismiss prompt suggestion (clears state, aborts speculation) */
   dismissPromptSuggestion: () => void;
+  /** Oversized paste rejection */
+  pasteTooLarge: { size: number; max: number } | null;
 }
 
 export const UIStateContext = createContext<UIState | null>(null);

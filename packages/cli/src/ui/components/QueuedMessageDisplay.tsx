@@ -111,7 +111,12 @@ export const QueuedMessageDisplay = ({
         <Text color={theme.text.accent}>ctrl+q</Text>
         <Text color={theme.text.secondary} dimColor>
           {' '}
-          to toggle)
+          to toggle,{' '}
+        </Text>
+        <Text color={theme.text.accent}>&lt;</Text>
+        <Text color={theme.text.secondary} dimColor>
+          {' '}
+          to edit last)
         </Text>
       </Box>
       {messageQueue

@@ -1393,6 +1393,58 @@ Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots 
       expect(getBufferState(result).text).toBe('Pasted Text');
     });
 
+    it('should reject oversized paste and call onPasteTooLarge callback', () => {
+      const callback = vi.fn();
+      const { result } = renderHook(() =>
+        useTextBuffer({
+          viewport,
+          isValidPath: () => false,
+          onPasteTooLarge: callback,
+        }),
+      );
+      const oversizedText = 'a'.repeat(500_001);
+
+      act(() =>
+        result.current.handleInput({
+          name: '',
+          ctrl: false,
+          meta: false,
+          shift: false,
+          paste: true,
+          sequence: oversizedText,
+        }),
+      );
+
+      expect(callback).toHaveBeenCalledWith(500_001, 500_000);
+      expect(getBufferState(result).text).toBe('');
+    });
+
+    it('should allow paste under the size limit', () => {
+      const callback = vi.fn();
+      const { result } = renderHook(() =>
+        useTextBuffer({
+          viewport,
+          isValidPath: () => false,
+          onPasteTooLarge: callback,
+        }),
+      );
+      const normalPaste = 'hello world';
+
+      act(() =>
+        result.current.handleInput({
+          name: '',
+          ctrl: false,
+          meta: false,
+          shift: false,
+          paste: true,
+          sequence: normalPaste,
+        }),
+      );
+
+      expect(callback).not.toHaveBeenCalled();
+      expect(getBufferState(result).text).toBe('hello world');
+    });
+
     it('should sanitize large text (>5000 chars) and strip unsafe characters', () => {
       const { result } = renderHook(() =>
         useTextBuffer({ viewport, isValidPath: () => false }),

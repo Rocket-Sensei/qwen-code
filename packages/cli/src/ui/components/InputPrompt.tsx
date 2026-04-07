@@ -136,6 +136,7 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
   const isShellFocused = useShellFocusState();
   const uiState = useUIState();
   const uiActions = useUIActions();
+  const { pasteTooLarge } = uiState;
   const { pasteWorkaround } = useKeypressContext();
   const { agents, agentTabBarFocused } = useAgentViewState();
   const { setAgentTabBarFocused } = useAgentViewActions();
@@ -1245,6 +1246,21 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
 
   return (
     <>
+      {/* Oversized paste error */}
+      {pasteTooLarge && (
+        <Box
+          marginLeft={2}
+          marginBottom={0}
+          borderStyle="round"
+          borderColor={theme.status.error}
+        >
+          <Text color={theme.status.error}>
+            {t(
+              `Paste too large (${(pasteTooLarge.size / 1000).toFixed(0)}K chars, max ${(pasteTooLarge.max / 1000).toFixed(0)}K). Input not accepted.`,
+            )}
+          </Text>
+        </Box>
+      )}
       {attachments.length > 0 && (
         <Box marginLeft={2} marginBottom={0}>
           <Text color={theme.text.secondary}>{t('Attachments: ')}</Text>
