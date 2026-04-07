@@ -13,7 +13,6 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
 // Get __dirname for ESM modules
-// @ts-expect-error - import.meta is supported in NodeNext module system at runtime
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 interface CheckResult {
