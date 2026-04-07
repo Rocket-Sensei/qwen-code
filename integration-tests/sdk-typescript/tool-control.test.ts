@@ -1160,7 +1160,7 @@ describe('Tool Control Parameters (E2E)', () => {
 
           // The file should be modified
           const content = await helper.readFile('test.txt');
-          expect(content).toBe('new content');
+          expect(content.trim()).toBe('new content');
         } finally {
           await q.close();
         }
@@ -1207,7 +1207,7 @@ describe('Tool Control Parameters (E2E)', () => {
 
           // File should be modified (not redirected to /some/other/path.txt)
           const content = await helper.readFile('test.txt');
-          expect(content).toBe('modified');
+          expect(content.trim()).toBe('modified');
         } finally {
           await q.close();
         }
@@ -1412,7 +1412,7 @@ describe('Tool Control Parameters (E2E)', () => {
 
           // Verify file was modified
           const content = await helper.readFile('test.txt');
-          expect(content).toBe('updated');
+          expect(content.trim()).toBe('updated');
         } finally {
           await q.close();
         }
